@@ -1,0 +1,63 @@
+services:
+  url: "https://home.mia-platform.test"
+
+  hooks:
+    postgresConnectivityCheck:
+      enabled: false
+    issuerConnectivityCheck:
+      enabled: false
+    seedData:
+      enabled: true
+      configurations:
+        default:
+          products:
+            console:
+              enabled: true
+              title: Console
+              websiteBaseUrl: "https://console.mia-platform.test"
+              apiPortalBaseUrl: "https://console.mia-platform.test/documentations/api-portal"
+            ai-foundry:
+              enabled: true
+              title: AI Foundry
+              websiteBaseUrl: "https://ai-foundry.mia-platform.test"
+            catalog:
+              enabled: true
+              title: Catalog
+              websiteBaseUrl: "https://catalog.mia-platform.test"
+              apiPortalBaseUrl: "https://catalog.mia-platform.test/documentations/api-portal"
+            authz:
+              enabled: true
+              title: Authorization
+            home:
+              enabled: true
+              title: Homepage
+              websiteBaseUrl: "https://home.mia-platform.test"
+              apiPortalBaseUrl: "https://home.mia-platform.test/documentations/api-portal"
+
+  telemetry:
+    enabled: false
+    otelExporterOtlpEndpoint: "http://opentelemetry-collector.tracing-system.svc.cluster.local:4317"
+
+  ingressRoute:
+    enabled: true
+
+  accessControl:
+    logLevel: debug
+
+  authorizationServer:
+    issuer: "https://auth.mia-platform.test/realms/mia-platform"
+
+  secrets:
+    authtoolBffKeys:
+      enabled: true
+    rbacManagementKeys:
+      enabled: true
+
+  apiGateway:
+    logLevel: debug
+    extraVirtualHosts:
+      - "home.mia-platform.test:443"
+      - "*"
+
+  swaggerAggregator:
+    enabled: true

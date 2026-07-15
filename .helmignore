@@ -1,0 +1,11 @@
+# Patterns to ignore when building packages.
+.git
+.gitignore
+.gitlab-ci.yml
+.docker/
+.helm/
+.kind/
+ci/
+ui/
+*.md
+LICENSE

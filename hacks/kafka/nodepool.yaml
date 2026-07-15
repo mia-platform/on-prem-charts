@@ -1,0 +1,40 @@
+# Source: kafka/templates/node-pool.yaml
+# ─── KafkaNodePool – Combined (controller + broker) ─────────────────────────
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaNodePool
+metadata:
+  name: combined
+  namespace: catalog
+  labels:
+    strimzi.io/cluster: catalog-kafka
+    helm.sh/chart: kafka-0.1.0
+    app.kubernetes.io/name: kafka
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/part-of: kafka
+    app.kubernetes.io/managed-by: Helm
+    app: kafka
+  annotations: {}
+
+spec:
+  replicas: 1
+  roles:
+    - controller
+    - broker
+  storage:
+    type: jbod
+    volumes:
+      - id: 0
+        type: persistent-claim
+        size: 20Gi
+        class: "standard"
+        deleteClaim: true
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 200m
+    limits:
+      memory: 1Gi
+      cpu: 500m
+  jvmOptions:
+    -Xms: 256m
+    -Xmx: 512m

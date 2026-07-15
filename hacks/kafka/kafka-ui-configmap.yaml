@@ -1,0 +1,27 @@
+# Source: kafka/templates/kafbat-ui-config.configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kafka-ui-config
+  namespace: catalog
+  labels:
+    helm.sh/chart: kafka-0.1.0
+    app.kubernetes.io/name: kafka
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/part-of: kafka
+    app.kubernetes.io/managed-by: Helm
+    app: kafka
+  annotations: {}
+
+data:
+  'config.yml': |-
+    kafka:
+      clusters:
+        - name: catalog-kafka
+          bootstrapServers: catalog-kafka-kafka-bootstrap:9092
+    auth:
+      type: disabled
+    management:
+      health:
+        ldap:
+          enabled: false

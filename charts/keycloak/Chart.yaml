@@ -1,0 +1,11 @@
+apiVersion: v2
+name: keycloak
+description: This is Keycloak
+type: application
+version: 15.0.0
+appVersion: 15.0.0
+
+dependencies:
+  - name: keycloak-operator
+    version: ~0.5
+    repository: "https://nexus.mia-platform.eu/repository/helm-internal/"

@@ -1,0 +1,39 @@
+keycloak-realm-management:
+  realmId: mia-platform
+  realmName: Mia Platform
+  themes:
+    login: mia-platform-keycloak-ui
+    account: mia-platform-keycloak-ui
+  smtpServer:
+    enabled: false
+  urls:
+    keycloak: https://auth.mia-platform.test
+    authz: https://home.mia-platform.test
+    catalog: https://catalog.mia-platform.test
+    console: https://test.console.gcp.mia-platform.eu
+    consoleCms: https://test.cms-console.gcp.mia-platform.eu
+    aiFoundry: https://ai-foundry-dev.console.gcp.mia-platform.eu
+    flow: https://flow-dev.console.gcp.mia-platform.eu
+  options:
+    isPaaS: false
+    cimd: false
+  products:
+    authz: true
+    console: true
+    catalog: true
+    aiFoundry: true
+    flow: true
+  idpSettings:
+    enabled: true
+    clientSecret: "${vault.mia-platform-identity-provider-client-secret}"
+    postLogoutRedirectUris:
+      - https://auth.mia-platform.test/realms/mia-platform-extensibility-development/broker/mia-platform/endpoint/logout_response
+    redirectUris:
+      - https://auth.mia-platform.test/realms/mia-platform-extensibility-development/broker/mia-platform/endpoint
+  identityProviders: []
+  identityProviderMappers: []
+
+  # TEST VALUES
+  browserFlow: browser
+  registrationAllowed: true
+

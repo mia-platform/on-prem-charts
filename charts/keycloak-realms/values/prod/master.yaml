@@ -1,0 +1,10 @@
+keycloak-realm-management:
+  realmId: master
+  realmName: Master
+  themes:
+    login: mia-platform-keycloak-ui
+    account: mia-platform-keycloak-ui
+  urls:
+    keycloak: https://auth.mia-platform.test
+  identityProviders: []
+  browserFlow: browser

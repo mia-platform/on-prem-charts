@@ -1,0 +1,46 @@
+# Source: kafka/templates/topics.yaml
+# ─── KafkaTopic ─────────────────────────────────────────────────────────────
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: catalog-events.input
+  namespace: catalog
+  labels:
+    strimzi.io/cluster: catalog-kafka
+    helm.sh/chart: kafka-0.1.0
+    app.kubernetes.io/name: kafka
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/part-of: kafka
+    app.kubernetes.io/managed-by: Helm
+    app: kafka
+  annotations: {}
+
+spec:
+  partitions: 3
+  replicas: 1
+  config:
+    retention.ms: 172800000
+    min.insync.replicas: 1
+---
+# Source: kafka/templates/topics.yaml
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: catalog-events.output
+  namespace: catalog
+  labels:
+    strimzi.io/cluster: catalog-kafka
+    helm.sh/chart: kafka-0.1.0
+    app.kubernetes.io/name: kafka
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/part-of: kafka
+    app.kubernetes.io/managed-by: Helm
+    app: kafka
+  annotations: {}
+
+spec:
+  partitions: 3
+  replicas: 1
+  config:
+    retention.ms: 172800000
+    min.insync.replicas: 1

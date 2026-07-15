@@ -1,0 +1,4 @@
+.local/
+.kind/.local/
+.kind/config
+charts/**/charts

@@ -1,0 +1,38 @@
+# Traefik acts as the TLS termination point for the local cluster.
+# The `traefik-tls` secret (created by hacks/tls.sh in the traefik
+# namespace before install) is used as the default certificate.
+#
+# Schema targets the Traefik Helm chart v41.x (Traefik v3).
+
+ports:
+  # Plain HTTP (node port 8000 -> host 80): redirect everything to the
+  # TLS entrypoint. See .kind/config.yaml extraPortMappings.
+  web:
+    hostPort: 8000
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+  # TLS termination happens here (websecure has http.tls.enabled=true by
+  # default). Node port 8443 -> host 443. See .kind/config.yaml.
+  websecure:
+    hostPort: 8443
+
+# Default TLS store: every router without its own cert falls back to
+# the mkcert-generated wildcard secret, so Traefik terminates TLS.
+tlsStore:
+  default:
+    defaultCertificate:
+      secretName: traefik-tls
+
+service:
+  type: ClusterIP
+
+nodeSelector:
+  node-role.kubernetes.io/control-plane: ""
+
+tolerations:
+  - key: node-role.kubernetes.io/control-plane
+    operator: Exists
+    effect: NoSchedule

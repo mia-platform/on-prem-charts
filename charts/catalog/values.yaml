@@ -1,0 +1,93 @@
+catalog:
+  url: "https://catalog.mia-platform.test"
+  environment: "local"
+
+  # We need to hit the api-gateway straight away since we have an issue with Cilium that
+  # does not allow to get out and get in back in the cluster. Therefore we removed a networkpolicy
+  # and we perform an infracluster. Consider this a temporary measure.
+
+  authzUrl: "https://home.mia-platform.test"
+  rbacAuthzServiceUrl: "http://api-gateway.services.svc.cluster.local:50051"
+
+  ingressRoute:
+    enabled: true
+
+  catalogKafkaContext:
+    connectionConfig:
+      useBootstrapServers: true
+      useSaslUsername: false
+      useSaslPassword: false
+      saslMechanism: PLAIN
+      securityProtocol: PLAINTEXT
+
+  authorizationServer:
+    issuer: "https://auth.mia-platform.test/realms/mia-platform"
+
+  telemetry:
+    enabled: true
+    otelExporterOtlpEndpoint: http://opentelemetry-collector.tracing-system.svc.cluster.local:4317
+    otelExporterOtlpProtocol: grpc
+
+  secrets:
+    accessControlKeys:
+      enabled: true
+    adkBeAppKeys:
+      enabled: true
+    authtoolBffKeys:
+      enabled: true
+    catalogEngineKeys:
+      enabled: true
+    itemsCompressorKeys:
+      enabled: true
+    kafkaKeys:
+      enabled: true
+    mailServiceKeys:
+      enabled: true
+
+  apiGateway:
+    extraVirtualHosts:
+      - "*"
+
+  accessControl:
+    logLevel: debug
+
+  adkBeApp:
+    image:
+      tag: latest
+      pullPolicy: Always
+    config:
+      googleCloudProject: "operations-lab"
+      googleCloudLocation: "europe-west1"
+      googleGenaiUseVertexai: true
+      otelExporterOtlpEndpoint: http://opentelemetry-collector.tracing-system.svc.cluster.local:4318
+      otelExporterOtlpProtocol: http/protobuf
+
+  doclingService:
+    enabled: true
+
+  itemsCompressor:
+    config:
+      kafkaConsumerConfig:
+        group.id: cg.catalog.item-compressor-dev
+        auto.offset.reset: earliest
+        queued.max.messages.kbytes: "32840"
+        queued.min.messages: "5000"
+      kafkaProducerConfig:
+        compression.type: snappy
+      postgresConfig:
+        cache:
+          enabled: true
+          tableName: "item_compressor_development_cache"
+          schemaName: "items_compressor_development_schema"
+
+  itemsConsumer:
+    config:
+      kafkaConfig:
+        group.id: cg.catalog.items-consumer-dev
+
+  mailService:
+    config:
+      host: "email-smtp.eu-west-1.amazonaws.com"
+
+  swaggerAggregator:
+    enabled: true
