@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # === Default Configuration ===
-KEY_DIR=""
+KEY_DIR=".local"
 RSA_BITS=2048
 COOKIE_KEY_SIZE=64      # bytes
 REDIS_KEY_SIZE=64       # bytes
@@ -13,9 +13,7 @@ OVERWRITE=false
 # === Argument Parsing ===
 usage() {
     echo "Usage: $0 [-d key_dir] [--private-key] [--public-key] [--overwrite]"
-    echo "  -d, --dir           Output directory for keys"
-    echo "      --private-key   Generate client RSA private key"
-    echo "      --public-key    Generate client RSA public key (requires --private-key)"
+    echo "  -d, --dir           Output directory for keys (default .local)"
     echo "      --overwrite     Overwrite existing key files"
     exit 1
 }
@@ -25,14 +23,6 @@ while [[ $# -gt 0 ]]; do
         -d|--dir)
             KEY_DIR="$2"
             shift 2
-            ;;
-        --private-key)
-            GENERATE_PRIVATE_KEY=true
-            shift
-            ;;
-        --public-key)
-            GENERATE_PUBLIC_KEY=true
-            shift
             ;;
         --overwrite)
             OVERWRITE=true
@@ -53,32 +43,22 @@ if [[ -z "$KEY_DIR" ]]; then
     usage
 fi
 
-if [[ "$GENERATE_PUBLIC_KEY" == true && "$GENERATE_PRIVATE_KEY" == false ]]; then
-    echo "Error: --public-key requires --private-key"
-    exit 1
-fi
-
 # === Helpers ===
 mkdir -p "$KEY_DIR"
 
-echo "🔧 Generating BFF key material in: $KEY_DIR"
+echo "🔧 Generating private key material in: $KEY_DIR"
 
 # --- RSA keypair for AS client assertion ---
-if [[ "$GENERATE_PRIVATE_KEY" == true ]]; then
-    if [[ ! -f "$KEY_DIR/client-private.pem" || "$OVERWRITE" == true ]]; then
-        echo "🗝 Creating RSA ${RSA_BITS}-bit keypair..."
-        openssl genpkey -algorithm RSA -out "$KEY_DIR/client-private.pem" \
-            -pkeyopt rsa_keygen_bits:${RSA_BITS} >/dev/null 2>&1
-        echo "✅ Created client-private.pem"
-        if [[ "$GENERATE_PUBLIC_KEY" == true ]]; then
-            openssl rsa -in "$KEY_DIR/client-private.pem" -pubout \
-                -out "$KEY_DIR/client-public.pem" >/dev/null 2>&1
-            echo "✅ Created client-public.pem"
-        fi
-    else
-        echo "➡️  RSA keypair already exists, skipping."
-    fi
+if [[ ! -f "$KEY_DIR/client-private.pem" || "$OVERWRITE" == true ]]; then
+    echo "🗝 Creating RSA ${RSA_BITS}-bit keypair..."
+    openssl genpkey -algorithm RSA -out "$KEY_DIR/client-private.pem" \
+        -pkeyopt rsa_keygen_bits:${RSA_BITS} >/dev/null 2>&1
+    echo "✅ Created client-private.pem"
+else
+    echo "➡️  RSA keypair already exists, skipping."
 fi
+
+echo "🔧 Generating BFF key material in: $KEY_DIR"
 
 # --- Cookie signing key (HMAC secret) ---
 if [[ ! -f "$KEY_DIR/cookie-secret.key" || "$OVERWRITE" == true ]]; then
@@ -98,4 +78,27 @@ else
     echo "➡️  redis-token-enc.key already exists, skipping."
 fi
 
-echo "🎉 All keys ready at: $KEY_DIR"
+# --- Generic client secret ---
+if [[ ! -f "$KEY_DIR/client-secret" || "$OVERWRITE" == true ]]; then
+    echo "🔒 Creating Oauth 2 client secret..."
+    # hex output = only [0-9a-f], no +/=/newline that Keycloak chokes on
+    openssl rand -hex 32 > "$KEY_DIR/client-secret"
+    echo "✅ Created client-secret"
+else
+    echo "➡️  client-secret already exists, skipping."
+fi
+
+echo "🎉 Creating secrets.yaml file"
+
+jq -n \
+    --rawfile tokenEncKey   "$KEY_DIR/redis-token-enc.key" \
+    --rawfile cookieSecret  "$KEY_DIR/cookie-secret.key" \
+    --rawfile clientSecret  "$KEY_DIR/client-secret" \
+    --rawfile privateKey    "$KEY_DIR/client-private.pem" \
+    '{
+        tokenEncKey:    ($tokenEncKey  | rtrimstr("\n")),
+        cookieSecret:   ($cookieSecret | rtrimstr("\n")),
+        clientSecret:   ($clientSecret | rtrimstr("\n")),
+        privateKey:     $privateKey,
+    }' | yq -P > "$KEY_DIR/secrets.yaml"
+

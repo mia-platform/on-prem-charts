@@ -37,7 +37,11 @@ export KUBECONFIG := $(CURDIR)/.kind/config
 	@./hacks/kafka.sh
 .PHONY: 07_init_kafka
 
-up: 00_init_docker 01_create_cluster 02_init_kyverno 03_init_tls 04_init_traefik 05_init_coredns 06_init_postgres 07_init_kafka ## Bring up the full local cluster (cluster + creds + kyverno/ca-trust + tls + traefik + coredns + postgres)
+08_init_secrets: ## Produce some secrets
+	@./hacks/setup_keys.sh
+.PHONY: 08_init_secrets
+
+up: 00_init_docker 01_create_cluster 02_init_kyverno 03_init_tls 04_init_traefik 05_init_coredns 06_init_postgres 07_init_kafka 08_init_secrets ## Bring up the full local cluster (cluster + creds + kyverno/ca-trust + tls + traefik + coredns + postgres)
 .PHONY: up
 
 down:

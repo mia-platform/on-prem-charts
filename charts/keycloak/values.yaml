@@ -1,20 +1,7 @@
-vault:
-  master:
-    keycloakConfigCliClientSecret: ""
-  development:
-    products:
-      idpClientSecret: ""
-    extensibility:
-      idpClientSecret: ""
-
-postgresCredentials:
-  enabled: true
-  username: ""
-  password: ""
-
 keycloak-operator:
   adminBootstrap:
     enabled: true
+    password: change_me
 
   # imagePullSecrets:
   #   - name: nexus-gcloud

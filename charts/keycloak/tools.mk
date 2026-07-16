@@ -10,9 +10,6 @@ keycloak_install: ## Install the Keycloak chart
 		--namespace=$(NAMESPACE) --create-namespace \
 		--wait --timeout=10m \
 		-f $(WORKING_DIR)/values.yaml \
-		-f $(WORKING_DIR)/secrets/admin-bootstrap.yaml \
-		-f $(WORKING_DIR)/secrets/postgres-credentials.yaml \
-		-f $(WORKING_DIR)/secrets/vault.yaml \
 		$(WORKING_DIR)
 .PHONY: keycloak_install
 
