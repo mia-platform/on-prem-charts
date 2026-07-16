@@ -1,6 +1,5 @@
 catalog:
   url: "https://catalog.mia-platform.test"
-  environment: "local"
 
   # We need to hit the api-gateway straight away since we have an issue with Cilium that
   # does not allow to get out and get in back in the cluster. Therefore we removed a networkpolicy
@@ -52,9 +51,6 @@ catalog:
     logLevel: debug
 
   adkBeApp:
-    image:
-      tag: latest
-      pullPolicy: Always
     config:
       googleCloudProject: "operations-lab"
       googleCloudLocation: "europe-west1"

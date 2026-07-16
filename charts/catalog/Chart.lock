@@ -1,6 +1,6 @@
 dependencies:
 - name: catalog
   repository: https://nexus.mia-platform.eu/repository/helm-internal/
-  version: 0.3.8
-digest: sha256:64cb5473d490eb8e8d8874004d49d8e0d32caf2b50333a02f6fb6b6cedc81fc8
-generated: "2026-07-16T09:13:15.498735085+02:00"
+  version: 0.3.11
+digest: sha256:0f238b1aadf153c41bb7e8c61ae9fc76dc8671fdefff3470d6362678d8c4b98b
+generated: "2026-07-16T17:28:44.212192546+02:00"

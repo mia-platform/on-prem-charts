@@ -1,4 +1,3 @@
-
 mia-console:
   imagePullSecrets:
     - name: nexus-gcloud
@@ -39,6 +38,17 @@ mia-console:
       username: default
       tls: true
     assistant:
-      enabled: false
-      llms: []
-      embeddings: {}
+      enabled: true
+      llms:
+        - type: azure
+          name: gpt-5-mini
+          displayName: GPT-5 Mini
+          deploymentName: gpt-5-mini
+          apiVersion: 2024-12-01-preview
+          url: https://openai.azure.com
+      embeddings:
+        type: "azure"
+        apiVersion: "2025-01-01-preview"
+        deploymentName: "text-embedding-3-large"
+        name: "text-embedding-3-large"
+        url: "https://openai.azure.com/"

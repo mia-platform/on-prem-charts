@@ -31,7 +31,7 @@ keycloak-operator:
         key: password
 
     image:
-      tag: "0.3.1-26.6.4-postgres"
+      tag: "0.3.2-26.6.4-postgres"
     # Keycloak (a JVM) fetches the services' merged client JWKS
     # (https://<host>.mia-platform.test/.well-known/jwks.json — mkcert-signed,
     # via Traefik -> Envoy) to verify private_key_jwt client assertions. Java

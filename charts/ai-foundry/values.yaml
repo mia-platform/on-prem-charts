@@ -3,6 +3,7 @@ ai-foundry:
   isPaaS: false
 
   authzUrl: "https://home.mia-platform.test"
+  rbacAuthzServiceUrl: "http://api-gateway.services.svc.cluster.local:8080"
   catalogUrl: "https://catalog.mia-platform.test"
 
   authtoolBffUrl: "http://authtool-bff"
@@ -40,7 +41,7 @@ ai-foundry:
       foundryIntrospectionTools: true
       allowPrivateNetworkMcp: true
 
-  # aiFoundryBff:
+    # aiFoundryBff:
     # config:
     #   tempoBaseUrl: "https://grafana.mia-platform.eu/api/datasources/proxy/uid/-4W1G8-Vk"
 
