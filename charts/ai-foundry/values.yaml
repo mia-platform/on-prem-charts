@@ -1,0 +1,77 @@
+ai-foundry:
+  url: "https://ai-foundry.mia-platform.test"
+  isPaaS: false
+
+  authzUrl: "https://home.mia-platform.test"
+  catalogUrl: "https://catalog.mia-platform.test"
+
+  authtoolBffUrl: "http://authtool-bff"
+  catalogClientId: "catalog-api"
+  authzClientId: "authz-api"
+
+  telemetry:
+    enabled: false
+    # otelExporterOtlpEndpoint: http://opentelemetry-collector.tracing-system.svc.cluster.local:4317
+
+  ingressRoute:
+    enabled: true
+
+  authorizationServer:
+    enabled: true
+    issuer: "https://auth.mia-platform.test/realms/mia-platform"
+
+  secrets:
+    accessControlKeys:
+      enabled: true
+    adkBeAppKeys:
+      enabled: true
+    aiFoundryBffKeys:
+      enabled: true
+    authtoolBffKeys:
+      enabled: true
+
+  adkBeApp:
+    config:
+      # otelExporterOtlpTracesEndpoint: "https://otel-dev.console.gcp.mia-platform.eu"
+      googleCloudProject: "operations-lab"
+      googleCloudLocation: "europe-west1"
+      googleGenaiUseVertexai: true
+      # tempoBaseUrl: "https://grafana.mia-platform.eu/api/datasources/proxy/uid/-4W1G8-Vk"
+      foundryIntrospectionTools: true
+      allowPrivateNetworkMcp: true
+
+  # aiFoundryBff:
+    # config:
+    #   tempoBaseUrl: "https://grafana.mia-platform.eu/api/datasources/proxy/uid/-4W1G8-Vk"
+
+  aiFoundryWebsite:
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "150Mi"
+      limits:
+        cpu: "100m"
+        memory: "150Mi"
+    config:
+      enabled: true
+      links:
+        consoleHref: "https://dev.console.gcp.mia-platform.eu"
+        catalogHref: "https://dev.catalog.gcp.mia-platform.eu"
+        homepageHref: "https://dev.home.gcp.mia-platform.eu"
+        miaFlowHref: "https://mia-flow-test.mia-demo-re5gu6.gcp.mia-platform.eu/flow/"
+        dataFabricHref: "https://fast-data-v2.mia-demo-re5gu6.gcp.mia-platform.eu/control-plane"
+        p4samdHref: "https://p4samd.cloud.mia-care.io"
+        claudeCodeHref: "https://claude.ai/code"
+        claudeCodeDocsHref: "https://code.claude.com/docs/en/discover-plugins#use-the-interactive-interface"
+        claudeCodeSkillsDocsHref: "https://docs.anthropic.com/en/docs/claude-code/skills"
+        claudeCodeTracesDocsHref: "https://code.claude.com/docs/en/monitoring-usage#traces-beta"
+        githubCopilotHref: "https://github.com/features/copilot"
+        githubCopilotCustomInstructionsHref: "https://docs.github.com/en/copilot/customizing-copilot/adding-repository-custom-instructions-for-github-copilot"
+        miaDocsHref: "https://v15.docs.mia-platform.eu/docs/products/ai-foundry/overview"
+        vscodeDocsHref: "https://code.visualstudio.com/docs/agent-customization/agent-plugins"
+        vscodeMonitoringDocsHref: "https://code.visualstudio.com/docs/agents/guides/monitoring-agents"
+        kiroDocsHref: "https://kiro.dev/docs/customization/agent-plugins"
+      otelServices:
+        - "copilot-chat"
+        - "claude-code"
+        - "mia-ai-foundry"

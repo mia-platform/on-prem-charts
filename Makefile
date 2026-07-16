@@ -6,6 +6,7 @@ include charts/catalog/tools.mk
 include charts/keycloak/tools.mk
 include charts/keycloak-realms/tools.mk
 include charts/services/tools.mk
+include charts/ai-foundry/tools.mk
 
 export KUBECONFIG := $(CURDIR)/.kind/config
 
@@ -33,3 +34,6 @@ help: ## Show this help
 	@$(MAKE) catalog_install
 .PHONY: 040_catalog
 
+050_ai_foundry: ## installs AI Foundry
+	@$(MAKE) ai_foundry_install
+.PHONY: 050_ai_foundry

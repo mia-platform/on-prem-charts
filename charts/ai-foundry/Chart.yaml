@@ -1,0 +1,11 @@
+apiVersion: v2
+name: mia-on-prem
+description: Umbrella chart bundling Mia Platform product stack for on-prem deployment
+type: application
+version: 15.0.0
+appVersion: 15.0.0
+
+dependencies:
+  - name: ai-foundry
+    version: "~0.4"
+    repository: "https://nexus.mia-platform.eu/repository/helm-internal/"
