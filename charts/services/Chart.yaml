@@ -1,6 +1,6 @@
 apiVersion: v2
 name: mia-on-prem
-description: Umbrella chart bundling Mia Platform Console stack for on-prem deployment
+description: Umbrella chart bundling Mia Platform product stack for on-prem deployment
 type: application
 version: 15.0.0
 appVersion: 15.0.0
@@ -9,4 +9,3 @@ dependencies:
   - name: services
     version: ~0.2
     repository: "https://nexus.mia-platform.eu/repository/helm-internal/"
-

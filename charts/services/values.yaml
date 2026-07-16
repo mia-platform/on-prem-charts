@@ -48,6 +48,8 @@ services:
     issuer: "https://auth.mia-platform.test/realms/mia-platform"
 
   secrets:
+    adkBeAppKeys:
+      enabled: true
     authtoolBffKeys:
       enabled: true
     rbacManagementKeys:

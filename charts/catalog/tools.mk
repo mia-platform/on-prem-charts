@@ -17,11 +17,15 @@ catalog_open: ## Open the catalog website in the default browser
 	@$(OPEN) "$(CATALOG_URL)"
 .PHONY: catalog_open
 
-catalog_install catalog_uninstall: NAMESPACE := catalog
-catalog_install catalog_uninstall: RELEASE := catalog
-catalog_install catalog_uninstall: WORKING_DIR := $(CURDIR)/charts/catalog
+catalog_install catalog_uninstall catalog_render_secrets: NAMESPACE := catalog
+catalog_install catalog_uninstall catalog_render_secrets: RELEASE := catalog
+catalog_install catalog_uninstall catalog_render_secrets: WORKING_DIR := $(CURDIR)/charts/catalog
 
-catalog_install: ## Install the catalog chart
+catalog_render_secrets: ## Render charts/catalog/.local/secrets.yaml from key material in folder .local
+	@$(WORKING_DIR)/render_values.sh
+.PHONY: catalog_render_secrets
+
+catalog_install: catalog_render_secrets ## Install the catalog chart
 	@helm dependency build $(WORKING_DIR)
 	@helm upgrade --install $(RELEASE) \
 		--namespace=$(NAMESPACE) --create-namespace \
