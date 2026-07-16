@@ -14,8 +14,8 @@ mia-console:
       realm: "mia-platform"
       extensibilityRealmName: "mia-platform-extensibility"
     enablePrometheusMetrics: false
-    #   ### uncomment these values only if you want to use gcp as a keyProvider
-    #   ### however you need an actual GCP infrastructure.
+    ####### uncomment these values only if you want to use gcp as a keyProvider
+    ####### however you need an actual GCP infrastructure.
     # crudEncryption:
     #   keyVaultNamespace: 'console.credentials-encryption'
     #   kmsProvider: 'gcp'
@@ -39,44 +39,6 @@ mia-console:
       username: default
       tls: true
     assistant:
-      enabled: true
-      llms:
-      - type: google_anthropic_vertex
-        name: claude-haiku-4-5
-        displayName: Claude Haiku 4.5
-        project: console-91ee
-        location: europe-west1
-      - type: google_anthropic_vertex
-        name: claude-sonnet-4-6
-        displayName: Claude Sonnet 4.6
-        project: console-91ee
-        location: europe-west1
-      - type: vertex
-        name: gemini-3.1-flash-lite
-        displayName: Gemini 3.1 Flash Lite
-        project: console-91ee
-        location: global
-      - type: vertex
-        name: gemini-3.1-pro-preview
-        displayName: Gemini 3.1 Pro (Preview)
-        project: console-91ee
-        location: global
-      - type: azure
-        name: gpt-5-mini
-        displayName: GPT-5 Mini
-        deploymentName: gpt-5-mini
-        apiVersion: 2024-12-01-preview
-        url: https://console-assistant.openai.azure.com
-      - type: azure
-        name: gpt-5.4
-        displayName: GPT-5.4
-        deploymentName: gpt-5.4
-        apiVersion: 2024-12-01-preview
-        url: https://console-assistant.openai.azure.com
-      embeddings:
-        type: "azure"
-        apiKey: ""
-        apiVersion: "2025-01-01-preview"
-        deploymentName: "text-embedding-3-large"
-        name: "text-embedding-3-large"
-        url: "https://console-assistant.openai.azure.com/"
+      enabled: false
+      llms: []
+      embeddings: {}

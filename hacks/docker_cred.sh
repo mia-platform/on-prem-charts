@@ -70,7 +70,7 @@ mkdir -p "${output_dir}"
 if [[ ! -f "${docker_config_file}" ]]; then
     log_warn "No Docker config found at" \
              "${docker_config_file}. Skipping."
-return
+    exit 0
 fi
 
 credsStore=$(jq -r '.credsStore // empty' "${docker_config_file}")

@@ -5,17 +5,17 @@ metadata:
   labels:
     app.kubernetes.io/part-of: "console"
     app.kubernetes.io/managed-by: "Helm"
-    helm.sh/chart: "console-15.0.0"
+    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
 spec:
   entryPoints:
     - "websecure"
   routes:
-    - match: Host(`console.mia-platform.test`)
+    - match: Host(`{{ (urlParse (index .Values "mia-console" "configurations" "consoleUrl")).host }}`)
       kind: Rule
       services:
         - name: "api-gateway"
           port: 8080
-    - match: Host(`cms-console.mia-platform.test`)
+    - match: Host(`{{ (urlParse (index .Values "mia-console" "configurations" "cmsUrl")).host }}`)
       kind: Rule
       services:
         - name: "api-gateway"

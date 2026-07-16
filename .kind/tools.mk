@@ -3,7 +3,7 @@ export KUBECONFIG := $(CURDIR)/.kind/config
 
 00_init_docker: ## Load docker registry credentials for the cluster
 	@./hacks/docker_cred.sh
-.PHONY: 01_init_docker
+.PHONY: 00_init_docker
 
 01_create_cluster: ## Create the kind cluster (skips if it already exists)
 	@if kind get clusters 2>/dev/null | grep -qx '$(KIND_CLUSTER_NAME)'; then \
@@ -11,7 +11,7 @@ export KUBECONFIG := $(CURDIR)/.kind/config
 	else \
 		kind create cluster --name=$(KIND_CLUSTER_NAME) --config $(CURDIR)/.kind/config.yaml; \
 	fi
-.PHONY: create_cluster
+.PHONY: 01_create_cluster
 
 02_init_kyverno: ## Install Kyverno and make the cluster trust the mkcert CA
 	@./hacks/kyverno.sh

@@ -71,13 +71,13 @@ helm repo update bitnami >/dev/null 2>&1
 
 log_info "Installing PostgreSQL..."
 helm upgrade --install postgres bitnami/postgresql \
-    --namespace ${POSTGRES_NAMESPACE} --create-namespace \
-    --set auth.postgresPassword=${POSTGRES_PASSWORD} \
+    --namespace "${POSTGRES_NAMESPACE}" --create-namespace \
+    --set auth.postgresPassword="${POSTGRES_PASSWORD}" \
     --set primary.persistence.enabled=false \
     --wait
 
 log_info "Waiting for PostgreSQL..."
-kubectl wait --namespace ${POSTGRES_NAMESPACE} \
+kubectl wait --namespace "${POSTGRES_NAMESPACE}" \
     --for=condition=ready pod \
     --selector=app.kubernetes.io/instance=postgres,app.kubernetes.io/name=postgresql \
     --timeout=120s
@@ -91,13 +91,13 @@ log_ok "PostgreSQL is ready."
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SQL_DIR="${SCRIPT_DIR}/postgres"
 
-POSTGRES_POD=$(kubectl get pod --namespace ${POSTGRES_NAMESPACE} \
+POSTGRES_POD=$(kubectl get pod --namespace "${POSTGRES_NAMESPACE}" \
     --selector=app.kubernetes.io/instance=postgres,app.kubernetes.io/name=postgresql \
     -o jsonpath='{.items[0].metadata.name}')
 
 for sql_file in "${SQL_DIR}"/*.sql; do
     log_info "Running $(basename "${sql_file}")..."
-    kubectl exec -i --namespace ${POSTGRES_NAMESPACE} "${POSTGRES_POD}" -- \
+    kubectl exec -i --namespace "${POSTGRES_NAMESPACE}" "${POSTGRES_POD}" -- \
         env PGPASSWORD="${POSTGRES_PASSWORD}" psql -U postgres -f - < "${sql_file}"
 done
 
