@@ -10,10 +10,10 @@ keycloak-realm-management:
     keycloak: https://auth.mia-platform.test
     authz: https://home.mia-platform.test
     catalog: https://catalog.mia-platform.test
-    console: https://test.console.gcp.mia-platform.eu
-    consoleCms: https://test.cms-console.gcp.mia-platform.eu
-    aiFoundry: https://ai-foundry-dev.console.gcp.mia-platform.eu
-    flow: https://flow-dev.console.gcp.mia-platform.eu
+    console: https://console.mia-platform.test
+    consoleCms: https://cms-console.mia-platform.test
+    aiFoundry: https://ai-foundry.mia-platform.test
+    flow: https://flow.mia-platform.test
   options:
     isPaaS: false
     cimd: false
@@ -36,4 +36,3 @@ keycloak-realm-management:
   # TEST VALUES
   browserFlow: browser
   registrationAllowed: true
-

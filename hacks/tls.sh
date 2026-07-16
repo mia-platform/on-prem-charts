@@ -75,6 +75,9 @@ HOSTS=(
     'auth.mia-platform.test'
     'home.mia-platform.test'
     'catalog.mia-platform.test'
+    'ai-foundry.mia-platform.test'
+    'console.mia-platform.test'
+    'cms-console.mia-platform.test'
     '*.mia-platform.test'  # cosmetic: documents intent, not resolved by glibc
 )
 
