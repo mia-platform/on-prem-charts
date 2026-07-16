@@ -41,7 +41,15 @@ export KUBECONFIG := $(CURDIR)/.kind/config
 	@./hacks/setup_keys.sh
 .PHONY: 08_init_secrets
 
-up: 00_init_docker 01_create_cluster 02_init_kyverno 03_init_tls 04_init_traefik 05_init_coredns 06_init_postgres 07_init_kafka 08_init_secrets ## Bring up the full local cluster (cluster + creds + kyverno/ca-trust + tls + traefik + coredns + postgres)
+09_init_mongo: ## Initialize a MongoDb instance into the cluster
+	@./hacks/mongo.sh
+.PHONY: 09_init_mongo
+
+10_init_redis: ## Initialize a Redis instance into the cluster
+	@./hacks/redis.sh
+.PHONY: 10_init_redis
+
+up: 00_init_docker 01_create_cluster 02_init_kyverno 03_init_tls 04_init_traefik 05_init_coredns 06_init_postgres 07_init_kafka 08_init_secrets 09_init_mongo 10_init_redis ## Bring up the full local cluster (cluster + creds + kyverno/ca-trust + tls + traefik + coredns + postgres)
 .PHONY: up
 
 down:

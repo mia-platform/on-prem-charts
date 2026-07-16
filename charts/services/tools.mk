@@ -21,7 +21,7 @@ services_install services_uninstall services_render_secrets: NAMESPACE := servic
 services_install services_uninstall services_render_secrets: RELEASE := services
 services_install services_uninstall services_render_secrets: WORKING_DIR := $(CURDIR)/charts/services
 
-services_render_secrets: ## Render charts/services/.local/secrets.yaml from key material in folder .local
+services_render_secrets: # Render charts/services/.local/secrets.yaml from key material in folder .local
 	@$(WORKING_DIR)/render_values.sh
 .PHONY: services_render_secrets
 

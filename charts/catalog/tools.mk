@@ -21,7 +21,7 @@ catalog_install catalog_uninstall catalog_render_secrets: NAMESPACE := catalog
 catalog_install catalog_uninstall catalog_render_secrets: RELEASE := catalog
 catalog_install catalog_uninstall catalog_render_secrets: WORKING_DIR := $(CURDIR)/charts/catalog
 
-catalog_render_secrets: ## Render charts/catalog/.local/secrets.yaml from key material in folder .local
+catalog_render_secrets: # Render charts/catalog/.local/secrets.yaml from key material in folder .local
 	@$(WORKING_DIR)/render_values.sh
 .PHONY: catalog_render_secrets
 

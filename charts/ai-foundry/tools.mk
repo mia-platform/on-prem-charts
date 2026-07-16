@@ -21,7 +21,7 @@ ai_foundry_install ai_foundry_uninstall ai_foundry_render_secrets: NAMESPACE := 
 ai_foundry_install ai_foundry_uninstall ai_foundry_render_secrets: RELEASE := ai-foundry
 ai_foundry_install ai_foundry_uninstall ai_foundry_render_secrets: WORKING_DIR := $(CURDIR)/charts/ai-foundry
 
-ai_foundry_render_secrets: ## Render charts/ai-foundry/.local/secrets.yaml from key material in folder .local
+ai_foundry_render_secrets: # Render charts/ai-foundry/.local/secrets.yaml from key material in folder .local
 	@$(WORKING_DIR)/render_values.sh
 .PHONY: ai_foundry_render_secrets
 
