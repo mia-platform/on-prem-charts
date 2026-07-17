@@ -61,3 +61,27 @@ AI Foundry installs, since they need to interoperate.
   Alternatively, the **Register** button on the login page lets anyone
   create a new user on the spot — those self-registered users only get
   regular (non-admin) permissions.
+
+## Post-install: rename the default tenant
+
+The seed data provisions a default tenant with a generic name and
+description. If you'd rather not keep that default, you can rename it
+through the api-portal exposed by the homepage, using the authorization
+(RBAC) APIs:
+
+1. **Open the api-portal.** From your homepage URL, go to
+   `/documentations/api-portal` (e.g.
+   `https://<your-homepage-url>/documentations/api-portal`).
+2. **List the tenants.** Call `GET /api/authz/admin/tenants` and, in the
+   response, find the default system tenant.
+3. **Note its `id` and `version`.** Both values are needed to perform the
+   update in the next step — the `version` acts as an optimistic-concurrency
+   check, so it must match the tenant's current value or the patch will be
+   rejected.
+4. **Patch the tenant.** Call
+   `PATCH /api/authz/admin/tenants/{tenantId}`, passing the `id` and
+   `version` you just retrieved together with the `name` and `description`
+   you want to assign to the tenant.
+
+Once the patch succeeds, the new name and description are reflected
+wherever the tenant is shown (e.g. in Catalog).
