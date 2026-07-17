@@ -41,10 +41,6 @@ ai-foundry:
       foundryIntrospectionTools: true
       allowPrivateNetworkMcp: true
 
-    # aiFoundryBff:
-    # config:
-    #   tempoBaseUrl: "https://grafana.mia-platform.eu/api/datasources/proxy/uid/-4W1G8-Vk"
-
   aiFoundryWebsite:
     resources:
       requests:

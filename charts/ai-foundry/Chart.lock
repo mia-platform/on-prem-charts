@@ -1,6 +1,6 @@
 dependencies:
 - name: ai-foundry
   repository: https://nexus.mia-platform.eu/repository/helm-internal/
-  version: 0.4.56
-digest: sha256:6489fe568904f5ed03ab959bb510354feb6c95c9579ca1fc017e9e8f291a7f1d
-generated: "2026-07-16T18:36:30.601296746+02:00"
+  version: 0.4.60
+digest: sha256:f9e66fcb6ed32446579a9ec88bb4510195605beb47eb96d14cfb69a4c4807b98
+generated: "2026-07-17T11:05:46.117706659+02:00"
