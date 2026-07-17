@@ -26,11 +26,12 @@ flowchart TD
     B --> C[Services]
     C --> D[Catalog]
     D --> E[AI Foundry]
-    D --> F[Console]
+    B --> F[Console]
 ```
 
-AI Foundry and Console both depend on Catalog and Services being in place,
-but not on each other — they can be installed in either order, or together.
+Console depends directly on Keycloak Realms and does not require Services,
+Catalog, or AI Foundry to be installed first. AI Foundry depends on Catalog
+and Services being in place.
 
 ## What this repository is not
 
