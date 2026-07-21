@@ -1,6 +1,6 @@
 dependencies:
 - name: services
   repository: https://nexus.mia-platform.eu/repository/helm-internal/
-  version: 0.2.56
-digest: sha256:6355c05ebcad82f2836eb86fcd349cde51f9b9d78afec7a63b0419d72a256354
-generated: "2026-07-17T11:23:23.321806985+02:00"
+  version: 0.2.62
+digest: sha256:95f2285da390fd1d1853079106ee9b053a08ba913469124d06d4c826cb76e46c
+generated: "2026-07-21T20:35:17.028853687+02:00"

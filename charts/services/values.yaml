@@ -19,11 +19,11 @@ services:
             ai-foundry:
               enabled: true
               title: AI Foundry
-              websiteBaseUrl: "https://ai-foundry.mia-platform.test"
+              websiteBaseUrl: "https://ai-foundry.mia-platform.test/website/"
             catalog:
               enabled: true
               title: Catalog
-              websiteBaseUrl: "https://catalog.mia-platform.test"
+              websiteBaseUrl: "https://catalog.mia-platform.test/website/"
               apiPortalBaseUrl: "https://catalog.mia-platform.test/documentations/api-portal"
             authz:
               enabled: true
