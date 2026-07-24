@@ -4,6 +4,13 @@ Chart: `charts/console` · Depends on: Keycloak, MongoDB, Redis
 
 Installs the Console product, via the `mia-console` dependency chart.
 
+> **Migrating an existing installation?** If you're installing this into a
+> cluster that already runs Console v14.x, don't follow this page as-is —
+> the `values.yaml` fields, the `userInfo` duplicate check, and the
+> `helm upgrade` invocation all differ from a fresh install. See the
+> [Migration Guide](../MIGRATION_GUIDE.md). This only applies to existing
+> installations; a fresh install can follow this page directly.
+
 ## Install
 
 ```

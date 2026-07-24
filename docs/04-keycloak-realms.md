@@ -12,6 +12,12 @@ configuration this suite expects — you can apply the same configuration
 with any tool that talks to that API (this `keycloak-config-cli`-based
 flow, the Keycloak Admin CLI, Terraform's Keycloak provider, etc.).
 
+> **Migrating an existing installation?** If you're installing this into a
+> cluster that already runs Console v14.x, configuring `identityProviders`/
+> `identityProviderMappers` here is a required migration step, not just a
+> generic option — see the [Migration Guide](../MIGRATION_GUIDE.md). This
+> only applies to existing installations; skip it for a fresh install.
+
 Two realm types are configured:
 
 - **`master`** — realm-level settings on the built-in `master` realm,
