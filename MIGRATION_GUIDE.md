@@ -48,50 +48,87 @@ configured entirely in the `products` realm (`mia-platform`), via
 `identityProviderMappers: []`) to be populated with the customer's IdP
 configuration.
 
+On customer IdP Application/Client you must exchange either:
+
+- a client secret
+- a set of public keys (jwks)
+
+Then the custom IdP Application must register the following login `redirect_uri` parameter:
+
+```
+https://<dns>/realms/<realm_name>/broker/<alias_idp>/endpoint
+```
+
+and logout `redirect_uri` parameter:
+
+```
+https://<dns>/realms/<realm_name>/broker/<alias_idp>/endpoint/logout_response
+```
+
 Example identity provider configuration:
 
 ```yaml
 keycloak-realm-management:
-  identityProviders:
-    - alias: customer-idp
-      config:
-        authorizationUrl: https://<your-idp>/oauth2/v1/authorize
-        clientAuthMethod: private_key_jwt   # or client_secret, if that's what your IdP issues
-        clientId: <your-oidc-client-id>
-        defaultScope: openid email profile offline_access
-        disableUserInfo: "true"
-        isAccessTokenJWT: "true"
-        issuer: https://<your-idp>
-        logoutUrl: https://<your-idp>/oauth2/v1/logout
-        pkceEnabled: "true"
-        pkceMethod: S256
-        sendIdTokenOnLogout: "true"
-        syncMode: IMPORT
-        tokenIntrospectionUrl: https://<your-idp>/oauth2/v1/introspect
-        tokenUrl: https://<your-idp>/oauth2/v1/token
-        jwksUrl: https://<your-idp>/oauth2/v1/keys
-        useJwksUrl: "true"
-        userInfoUrl: https://<your-idp>/oauth2/v1/userinfo
-      displayName: <Your IdP display name>
-      enabled: true
-      providerId: oidc
-      trustEmail: true
+    identityProviders:
+        - alias: customer-idp # <=== <alias_idp>
+          config:
+              # --- client authentication: shared secret (NOT asymmetric keys) ---
+              clientAuthMethod: client_secret_post # or client_secret_basic
+              clientId: my-registered-client-id
+              clientSecret: "${vault.my-idp-client-secret}"
 
-  identityProviderMappers:
-    - name: customer-idp-uid-mapper
-      config:
-        claim: <the claim your IdP uses as a stable user identifier, e.g. sub or uid>
-        syncMode: IMPORT
-        user.attribute: provider_sub
-      identityProviderAlias: customer-idp
-      identityProviderMapper: oidc-user-attribute-idp-mapper
-    - name: customer-idp-console-guest-mapper
-      config:
-        syncMode: FORCE
-        group: /products/console/guest
-      identityProviderMapper: oidc-hardcoded-group-idp-mapper
-      identityProviderAlias: customer-idp
+              # --- endpoints (from the IdP's .well-known/openid-configuration) ---
+              authorizationUrl: https://idp.example.com/oauth2/authorize
+              tokenUrl: https://idp.example.com/oauth2/token
+              userInfoUrl: https://idp.example.com/oauth2/userinfo
+              logoutUrl: https://idp.example.com/oauth2/logout
+              issuer: https://idp.example.com
+
+              # --- scopes / behavior ---
+              defaultScope: "openid email profile"
+              syncMode: FORCE
+              pkceEnabled: "true"
+              pkceMethod: S256
+
+              # signature verification of the IdP's tokens (independent of client auth)
+              validateSignature: "true"
+              useJwksUrl: "true"
+              jwksUrl: https://idp.example.com/oauth2/certs
+          displayName: <Your IdP display name>
+          enabled: true
+          providerId: oidc
+          trustEmail: true
+
+    identityProviderMappers:
+        - name: customer-idp-uid-mapper
+          config:
+              claim: <the claim your IdP uses as a stable user identifier, e.g. sub or uid>
+              syncMode: IMPORT
+              user.attribute: provider_sub
+          identityProviderAlias: customer-idp
+          identityProviderMapper: oidc-user-attribute-idp-mapper
+        - name: customer-idp-console-guest-mapper
+          config:
+              syncMode: FORCE
+              group: /products/console/guest
+          identityProviderMapper: oidc-hardcoded-group-idp-mapper
+          identityProviderAlias: customer-idp
 ```
+
+`customer-idp-uid-mapper` should match the claim that is currently used by Authentication
+Service on the customer provider:
+Keycloak logic states that `oidc-user-attribute-idp-mapper` it reads from user profile from the following sources:
+
+1. UserInfo endpoint (default). If the IdP's Disable User Info switch is off (the default)
+   and a UserInfo URL + access token are available, Keycloak calls UserInfo (using the access token as a bearer)
+   and stores the UserInfo response as the profile node. Your claims are mapped from there.
+2. ID token (fallback). If User Info is disabled,
+   or there's no UserInfo endpoint / no access token, Keycloak falls back to the ID token
+   claims as the profile node.
+
+- Okta -> `uid`
+- Entra ID -> `oid`
+- Auth0 -> either `sub` or `user_id`
 
 #### Purpose of the `provider_sub` mapping
 
@@ -119,18 +156,18 @@ Run the following aggregation against the `userInfo` collection before
 upgrading Console, to identify duplicates:
 
 ```js
-db.userInfo.aggregate([
-  { $match: { __STATE__: "PUBLIC" } },
-  {
-    $group: {
-      _id: "$providerUserId",
-      count: { $sum: 1 },
-      ids: { $push: "$_id" }
-    }
-  },
-  { $match: { count: { $gt: 1 } } },
-  { $sort: { count: -1 } }
-])
+db.userinfo.aggregate([
+    { $match: { __STATE__: "PUBLIC" } },
+    {
+        $group: {
+            _id: "$providerUserId",
+            count: { $sum: 1 },
+            ids: { $push: "$_id" },
+        },
+    },
+    { $match: { count: { $gt: 1 } } },
+    { $sort: { count: -1 } },
+]);
 ```
 
 If this query returns results, they must be resolved before proceeding
@@ -145,31 +182,31 @@ current v15 `charts/console/values.yaml`.
 
 #### Removed in v15
 
-| v14 field | Reason |
-|---|---|
-| `miaconsole.configurations.authProviders` | Replaced by Keycloak `identityProviders`/`identityProviderMappers` (see above). |
-| `miaconsole.configurations.userAccountAuthProvider` (`tokenPassphrase`, `jwtTokenPrivateKey*`) | Replaced by Keycloak and `authtoolBff.keys`. |
-| `miaconsole.authenticationService` (the whole component) | Removed — Keycloak replaces Console's native auth service entirely. |
-| `miaconsole.configurations.enableUserSynchronizationWebhooks` | Specific to syncing users from the native auth service; no longer applicable. |
-| `miaconsole.configurations.additionalAuthenticationClients` | No v15 equivalent in this repository's reference values. If in use (e.g. for a local MCP-server login flow), this requires manual review rather than a direct migration. |
-| `imageCredentials.username` / `imageCredentials.password` (root and `miaconsole` level) | Replaced by a Kubernetes image pull secret — see `imagePullSecrets`/`imageCredentials.name` in [Console](docs/08-console.md). |
-| `miaconsole.configurations.serviceAccountAuthProvider.rsaPrivateKeyPass` | No longer part of the schema; the service-account private key is no longer passphrase-protected. |
+| v14 field                                                                                      | Reason                                                                                                                                                                   |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `miaconsole.configurations.authProviders`                                                      | Replaced by Keycloak `identityProviders`/`identityProviderMappers` (see above).                                                                                          |
+| `miaconsole.configurations.userAccountAuthProvider` (`tokenPassphrase`, `jwtTokenPrivateKey*`) | Replaced by Keycloak and `authtoolBff.keys`.                                                                                                                             |
+| `miaconsole.authenticationService` (the whole component)                                       | Removed — Keycloak replaces Console's native auth service entirely.                                                                                                      |
+| `miaconsole.configurations.enableUserSynchronizationWebhooks`                                  | Specific to syncing users from the native auth service; no longer applicable.                                                                                            |
+| `miaconsole.configurations.additionalAuthenticationClients`                                    | No v15 equivalent in this repository's reference values. If in use (e.g. for a local MCP-server login flow), this requires manual review rather than a direct migration. |
+| `imageCredentials.username` / `imageCredentials.password` (root and `miaconsole` level)        | Replaced by a Kubernetes image pull secret — see `imagePullSecrets`/`imageCredentials.name` in [Console](docs/08-console.md).                                            |
+| `miaconsole.configurations.serviceAccountAuthProvider.rsaPrivateKeyPass`                       | No longer part of the schema; the service-account private key is no longer passphrase-protected.                                                                         |
 
 #### Added in v15
 
-| v15 field | Purpose |
-|---|---|
-| `miaconsole.configurations.keycloak.protocol` / `host` / `realm` / `extensibilityRealmName` | Points Console at the new Keycloak instance and realms. Required. |
-| `miaconsole.authtoolBff.keys` (`privateKey`, `cookieSecret`, `redisTokenEncKey`) | New BFF component that bridges Keycloak-issued tokens — see [Console secrets](docs/08-console.md#secrets). |
-| `miaconsole.extensibilityManagerService.keys.registrarPrivateKey` | New — used to register extensibility clients. |
-| top-level `dns` | New field alongside `consoleDNS`/`consoleCMSDNS` in production-style overlays. |
+| v15 field                                                                                   | Purpose                                                                                                    |
+| ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `miaconsole.configurations.keycloak.protocol` / `host` / `realm` / `extensibilityRealmName` | Points Console at the new Keycloak instance and realms. Required.                                          |
+| `miaconsole.authtoolBff.keys` (`privateKey`, `cookieSecret`, `redisTokenEncKey`)            | New BFF component that bridges Keycloak-issued tokens — see [Console secrets](docs/08-console.md#secrets). |
+| `miaconsole.extensibilityManagerService.keys.registrarPrivateKey`                           | New — used to register extensibility clients.                                                              |
+| top-level `dns`                                                                             | New field alongside `consoleDNS`/`consoleCMSDNS` in production-style overlays.                             |
 
 #### Changed structure
 
-| Field | v14 shape | v15 shape |
-|---|---|---|
-| `miaconsole.configurations.redis.hosts` | List of plain host strings | List of `{ip, port}` objects |
-| `miaconsole.configurations.audit` | `configurations.audit.mongodbUrl` (plain value) | `configurations.audit.envs.mongodbUrl` (nested under `envs`, secret-injected) |
+| Field                                   | v14 shape                                       | v15 shape                                                                     |
+| --------------------------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------- |
+| `miaconsole.configurations.redis.hosts` | List of plain host strings                      | List of `{ip, port}` objects                                                  |
+| `miaconsole.configurations.audit`       | `configurations.audit.mongodbUrl` (plain value) | `configurations.audit.envs.mongodbUrl` (nested under `envs`, secret-injected) |
 
 ### Suggested upgrade command
 
