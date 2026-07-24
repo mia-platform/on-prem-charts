@@ -56,3 +56,40 @@ actually matches between the two products involved.
 - Console's `configurations.redis.tlsCACert` must be the CA that actually
   signed your Redis instance's certificate — a mismatch here causes TLS
   handshake failures that can look like a generic connection timeout.
+
+## `helm upgrade` fails on an existing Console install because of leftover Jobs
+
+If you're running `helm upgrade` against a namespace that already has a
+previous installation of Console, the upgrade can fail because Kubernetes
+`Job` resources from that previous install are still present — `Job`
+specs are immutable, so Helm can't update them in place, and the upgrade
+errors out instead of replacing them.
+
+This is safe to resolve manually: the leftover `Job`s from the previous
+install can simply be deleted from the namespace, after which `helm
+upgrade` can be run again and will succeed.
+
+```
+kubectl get jobs -n <console-namespace>
+kubectl delete job <job-name> -n <console-namespace>
+```
+
+Deleting these completed Jobs does not affect your data — it only clears
+the old, immutable Job records so Helm can recreate them as part of the
+upgrade.
+
+## Migrating Console from v14.x
+
+These only come up if you're following the
+[Migration Guide](../MIGRATION_GUIDE.md) to upgrade an existing v14.x
+Console install to v15.0.0 — they don't apply to a fresh install.
+
+- **A migrated user loses access/history on first login** — check the
+  `provider_sub` mapper configuration in your realm's
+  `identityProviderMappers`; the claim it copies must match the identifier
+  your IdP has always used for that user. See the Migration Guide's
+  identity-provider section for the mapper example.
+- **Upgrade fails on a unique index error for `userInfo`** — you have
+  duplicate `providerUserId` values among active (`__STATE__: "PUBLIC"`)
+  users. Re-run the duplicate-check aggregation from the Migration Guide
+  and resolve them before retrying.
