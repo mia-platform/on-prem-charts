@@ -7,5 +7,5 @@ appVersion: 15.0.0
 
 dependencies:
   - name: mia-console
-    version: "15.0.15"
+    version: "~15.0"
     repository: "https://nexus.mia-platform.eu/repository/helm-internal/"
