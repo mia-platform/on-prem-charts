@@ -63,6 +63,17 @@ under `rendered/<env>/<tier>/<realm-type>/`.
 > variables, or replace the placeholders with your own real secret values
 > before import.
 >
+> Note that a `${vault.<key>}` placeholder never includes the realm prefix
+> used in `templates/vault.secret.yaml`'s `<realm>_<key>` Secret keys (see
+> [Keycloak](03-keycloak.md)) — only the `<key>` part. This is why the
+> `products.yaml` and `extensibility.yaml` realm files can both reference
+> `${vault.mia-platform-identity-provider-client-secret}` and still resolve
+> to different values: `keycloak-config-cli` reads it against the
+> `mia-platform_mia-platform-identity-provider-client-secret` Secret key
+> when importing the `products` realm, and against
+> `mia-platform-extensibility_mia-platform-identity-provider-client-secret`
+> when importing `extensibility`.
+>
 > Note specifically that `${vault.mia-platform-identity-provider-client-secret}`
 > is not an arbitrary internal secret — it's the client secret for the
 > **external Identity Provider** federation described in
