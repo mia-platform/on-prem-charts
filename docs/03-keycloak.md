@@ -53,21 +53,21 @@ values-driven render step) before install:
   it from `charts/keycloak/render_values.sh`, which reads a `clientSecret`
   value into `charts/keycloak/.local/secrets.yaml` and feeds it to
   `templates/vault.secret.yaml`. In your environment, this should be the
-  client secret you intend to use for the `mia-platform`/
-  `mia-platform-extensibility` identity-provider clients configured during
-  realm import — generate it yourself and adapt the render step (or the
+  client secret you intend to use for the `mia-realm` (or the realm name
+  you chose)/`mia-realm-extensibility` identity-provider clients configured
+  during realm import — generate it yourself and adapt the render step (or the
   Secret) to your own secret-management approach rather than reusing the
   `.local/` dev key material.
 
   Each key in `templates/vault.secret.yaml` follows the format
-  `<realm>_<key>`, e.g. `mia-platform_mia-platform-identity-provider-client-secret`.
-  The part before the first underscore (`mia-platform`) is the realm the
+  `<realm>_<key>`, e.g. `mia-realm_mia-identity-provider-client-secret`.
+  The part before the first underscore (`mia-realm`) is the realm the
   secret applies to; the part after it
-  (`mia-platform-identity-provider-client-secret`) is the key referenced in
+  (`mia-identity-provider-client-secret`) is the key referenced in
   realm YAML as `${vault.<key>}` (see
   [Keycloak Realms](04-keycloak-realms.md)) — the realm prefix itself is not
   part of that reference. This is why the same key name can appear under
-  different realm prefixes (`mia-platform_` vs. `mia-platform-extensibility_`):
+  different realm prefixes (`mia-realm` vs. `mia-realm-extensibility_`):
   each realm gets its own copy of the secret value under its own Secret key,
   even though the `${vault....}` placeholder they resolve looks identical.
 

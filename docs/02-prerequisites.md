@@ -43,10 +43,10 @@ You will need, from that external IdP:
   `/.well-known/openid-configuration`.
 
 This repository's default configuration
-(`charts/keycloak-realms/values/prod/production/extensibility.yaml`, alias
-`mia-platform`) points these at a realm on the same local Keycloak instance,
-purely so the federation flow can be tested end-to-end without a second
-IdP. **Before using this as a reference for production, replace every one
+(`charts/keycloak-realms/values/prod/production/extensibility.yaml`) points
+these at the `mia-realm` realm (or whatever realm name you chose) on the
+same local Keycloak instance, purely so the federation flow can be tested
+end-to-end without a second IdP. **Before using this as a reference for production, replace every one
 of those URLs and the `clientId`/`clientSecret` with your actual external
 IdP's details** — see the client-secret note in
 [Keycloak Realms](04-keycloak-realms.md) for where that secret is

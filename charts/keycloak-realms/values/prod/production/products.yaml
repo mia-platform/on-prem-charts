@@ -1,5 +1,5 @@
 keycloak-realm-management:
-  realmId: mia-platform
+  realmId: mia-realm
   realmName: Mia Platform
   themes:
     login: mia-platform-keycloak-ui
@@ -25,11 +25,11 @@ keycloak-realm-management:
     flow: true
   idpSettings:
     enabled: true
-    clientSecret: "${vault.mia-platform-identity-provider-client-secret}"
+    clientSecret: "${vault.mia-identity-provider-client-secret}"
     postLogoutRedirectUris:
-      - https://auth.mia-platform.test/realms/mia-platform-extensibility-development/broker/mia-platform/endpoint/logout_response
+      - https://auth.mia-platform.test/realms/mia-realm-extensibility-development/broker/mia-realm/endpoint/logout_response
     redirectUris:
-      - https://auth.mia-platform.test/realms/mia-platform-extensibility-development/broker/mia-platform/endpoint
+      - https://auth.mia-platform.test/realms/mia-realm-extensibility-development/broker/mia-realm/endpoint
   identityProviders: []
   identityProviderMappers: []
 

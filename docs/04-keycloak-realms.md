@@ -54,7 +54,7 @@ under `rendered/<env>/<tier>/<realm-type>/`.
 > `keycloak-config-cli`'s variable-substitution feature
 > (`IMPORT_VARSUBSTITUTION_ENABLED=false`) while the realm values files still
 > contain `${vault....}`-style placeholders (e.g.
-> `${vault.mia-platform-identity-provider-client-secret}`,
+> `${vault.mia-identity-provider-client-secret}`,
 > `${vault.keycloak-config-cli-client-secret}`). With substitution disabled,
 > those placeholders are imported into Keycloak literally instead of being
 > resolved to real secret values, which breaks the client secrets they're
@@ -67,14 +67,14 @@ under `rendered/<env>/<tier>/<realm-type>/`.
 > used in `templates/vault.secret.yaml`'s `<realm>_<key>` Secret keys (see
 > [Keycloak](03-keycloak.md)) — only the `<key>` part. This is why the
 > `products.yaml` and `extensibility.yaml` realm files can both reference
-> `${vault.mia-platform-identity-provider-client-secret}` and still resolve
+> `${vault.mia-identity-provider-client-secret}` and still resolve
 > to different values: `keycloak-config-cli` reads it against the
-> `mia-platform_mia-platform-identity-provider-client-secret` Secret key
+> `mia-realm_mia-identity-provider-client-secret` Secret key
 > when importing the `products` realm, and against
-> `mia-platform-extensibility_mia-platform-identity-provider-client-secret`
+> `mia-realm-extensibility_mia-identity-provider-client-secret`
 > when importing `extensibility`.
 >
-> Note specifically that `${vault.mia-platform-identity-provider-client-secret}`
+> Note specifically that `${vault.mia-identity-provider-client-secret}`
 > is not an arbitrary internal secret — it's the client secret for the
 > **external Identity Provider** federation described in
 > [Prerequisites](02-prerequisites.md#-external-identity-provider). It must
@@ -91,9 +91,11 @@ under `rendered/<env>/<tier>/<realm-type>/`.
 
 ## Post-install: create a super-admin user
 
-The `products` realm is imported under the realm name **`mia-platform`**
-(not literally "products" — see `products/010-realm-settings.yaml`). In
-that realm, create a new user with a username and password of your choice,
+The `products` realm is imported under the realm name **`mia-realm`**
+(not literally "products" — see `products/010-realm-settings.yaml`). This
+name is a prototype value in this repository's example configuration — set
+it to whatever realm name your installation actually uses, not a fixed
+identifier. In that realm, create a new user with a username and password of your choice,
 then add it to the **`products/authz/superadmin`** group. That group maps
 the `authz-api` client role `urn:mia-platform-internal:role:authz:superadmin`,
 which is what grants full administrative access across the products (Home,
