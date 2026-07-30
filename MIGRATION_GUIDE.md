@@ -55,13 +55,13 @@ On customer IdP Application/Client you must exchange either:
 
 Then the custom IdP Application must register the following login `redirect_uri` parameter:
 
-```
+```url
 https://<dns>/realms/<realm_name>/broker/<alias_idp>/endpoint
 ```
 
 and logout `redirect_uri` parameter:
 
-```
+```url
 https://<dns>/realms/<realm_name>/broker/<alias_idp>/endpoint/logout_response
 ```
 
@@ -199,7 +199,6 @@ current v15 `charts/console/values.yaml`.
 | `miaconsole.configurations.keycloak.protocol` / `host` / `realm` / `extensibilityRealmName` | Points Console at the new Keycloak instance and realms. Required.                                          |
 | `miaconsole.authtoolBff.keys` (`privateKey`, `cookieSecret`, `redisTokenEncKey`)            | New BFF component that bridges Keycloak-issued tokens — see [Console secrets](docs/08-console.md#secrets). |
 | `miaconsole.extensibilityManagerService.keys.registrarPrivateKey`                           | New — used to register extensibility clients.                                                              |
-| top-level `dns`                                                                             | New field alongside `consoleDNS`/`consoleCMSDNS` in production-style overlays.                             |
 
 #### Changed structure
 
@@ -214,7 +213,7 @@ Once the realm and `values.yaml` changes described above are in place,
 the following command can be used as a starting point; adjust it to match
 existing deployment conventions:
 
-```
+```sh
 helm upgrade --install console charts/console \
   --namespace <existing-console-namespace> \
   -f charts/console/values.yaml \
