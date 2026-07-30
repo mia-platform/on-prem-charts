@@ -40,6 +40,30 @@ The realm configuration lives in `charts/keycloak-realms/values/prod/`:
 `template.sh` renders these into `keycloak-config-cli`-consumable YAML
 under `rendered/<env>/<tier>/<realm-type>/`.
 
+## Install
+
+There's no `helm install` here — this chart only renders configuration.
+Applying it means running `template.sh` to render a realm, then running
+`keycloak-config-cli` against the rendered output. In this repository's
+local dev setup, that's wrapped in two `make` targets that do both steps
+for each realm type:
+
+```
+make keycloak_realms_master_as_admin_install
+make keycloak_realms_production_install
+```
+
+The first renders and imports the `master` realm, authenticated as the
+Keycloak admin user; the second loops over `products` and `extensibility`,
+authenticated as the `keycloak-config-cli` client created during the
+`master` import (see [Import order and credentials](#import-order-and-credentials)
+below). See `charts/keycloak-realms/tools.mk` for the exact
+`keycloak-config-cli` invocation and environment variables — in
+production, replace it with however you run `keycloak-config-cli` against
+your own cluster (e.g. a Kubernetes `Job`), pointed at your own
+`KEYCLOAK_URL`, admin/client credentials, and TLS configuration, rather
+than this repository's local, `--network host`-based `docker run`.
+
 ## Import order and credentials
 
 1. **Master realm**, authenticated as the Keycloak admin user
