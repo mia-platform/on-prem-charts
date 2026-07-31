@@ -7,5 +7,5 @@ appVersion: 15.0.0
 
 dependencies:
   - name: keycloak-realm-management
-    version: 0.1.28
+    version: 0.1.28-0
     repository: "https://nexus.mia-platform.eu/repository/helm-internal/"
