@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./values.schema.json
 keycloak-operator:
   adminBootstrap:
     enabled: true

@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../../values.schema.json
 keycloak-realm-management:
   realmId: mia-platform
   realmName: Mia Platform

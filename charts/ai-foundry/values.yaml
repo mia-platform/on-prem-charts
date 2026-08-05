@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./values.schema.json
 ai-foundry:
   url: "https://ai-foundry.mia-platform.test"
   isPaaS: false

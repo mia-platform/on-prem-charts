@@ -1,0 +1,9 @@
+{
+    "$schema": "https://json-schema.org/draft-04/schema#",
+    "type": "object",
+    "properties": {
+        "keycloak-realm-management": {
+            "$ref": "https://cdn.mia-platform.eu/runtime/platform/auth/keycloak-realm-management/0.1.28-0/values.schema.json"
+        }
+    }
+}
