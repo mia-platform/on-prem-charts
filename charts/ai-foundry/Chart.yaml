@@ -7,5 +7,5 @@ appVersion: 15.0.0
 
 dependencies:
   - name: ai-foundry
-    version: "0.4.76"
+    version: 0.4.79
     repository: "https://nexus.mia-platform.eu/repository/helm-internal/"
