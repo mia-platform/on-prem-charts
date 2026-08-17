@@ -57,7 +57,7 @@ ai-foundry:
         homepageHref: "https://home.mia-platform.test"
         miaFlowHref: "https://flow.mia-platform.test"
         dataFabricHref: "https://data-fabric.mia-platform.test"
-        p4samdHref: "https://pfsamd.mia-platform.test"
+        p4samdHref: "https://p4samd.mia-platform.test"
         claudeCodeHref: "https://claude.ai/code"
         claudeCodeDocsHref: "https://code.claude.com/docs/en/discover-plugins#use-the-interactive-interface"
         claudeCodeSkillsDocsHref: "https://docs.anthropic.com/en/docs/claude-code/skills"
