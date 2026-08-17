@@ -75,7 +75,7 @@ system, so they're not usually worth installing separately.
 > local machine's `/etc/hosts` (via `sudo`) so the suite's hostnames resolve
 > to `127.0.0.1`:
 >
-> ```
+> ```txt
 > 127.0.0.1 mia-platform.test
 > 127.0.0.1 auth.mia-platform.test
 > 127.0.0.1 home.mia-platform.test

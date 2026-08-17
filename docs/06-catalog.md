@@ -26,6 +26,7 @@ All configuration lives under the `catalog` key.
 | `rbacAuthzServiceUrl` | Yes | In-cluster gRPC address of the authorization service from the Services chart. |
 | `authorizationServer.issuer` | Yes | Keycloak realm issuer URL. |
 | `catalogKafkaContext.connectionConfig` | Yes | Kafka bootstrap-servers/SASL/security-protocol settings — must match your Kafka cluster. |
+| `catalogKafkaContext.topics.input` / `.output` | Yes | Kafka topic names Catalog produces/consumes on — must match the actual topic names on your Kafka cluster, not necessarily this repository's `catalog-events.input`/`catalog-events.output` defaults. |
 | `ingressRoute.enabled` | Yes (if using Traefik) | Disable and configure your own ingress otherwise. |
 | `secrets.*.enabled` | Yes | Toggles gating each secrets block below — must all be `true`. |
 | `adkBeApp.config.googleCloudProject` / `googleCloudLocation` / `googleGenaiUseVertexai` | Only if using the ADK's Vertex AI integration | GCP project/region for the AI features; omit or adjust if you don't use GCP/Vertex. |
@@ -57,12 +58,13 @@ Generated in this repository via `charts/catalog/render_values.sh`:
 - `kubectl get pods -n catalog` — pods `Running`.
 - Visit the Catalog URL and confirm you can sign in and browse items.
 - Sign in with the username/password of the user you created in the
-  `mia-platform` realm (see
+  `mia-realm` realm (or the realm name you chose) (see
   [Keycloak Realms: create a super-admin user](04-keycloak-realms.md#post-install-create-a-super-admin-user)).
   Alternatively, the **Register** button on the login page lets anyone
   create a new user on the spot — those self-registered users only get
   regular (non-admin) permissions.
-- Confirm Kafka topics for `catalog-events.input`/`catalog-events.output`
-  (or your equivalent) exist and are being consumed (see
-  `hacks/kafka/topics.yaml` for the partition/retention settings this
-  repository uses as a reference).
+- Confirm the topics named in `catalogKafkaContext.topics.input`/`.output`
+  exist on your Kafka cluster and are being consumed. This repository's
+  local setup names them `catalog-events.input`/`catalog-events.output`
+  (see `hacks/kafka/topics.yaml` for the partition/retention settings used
+  there as a reference) — your own installation's topic names may differ.
