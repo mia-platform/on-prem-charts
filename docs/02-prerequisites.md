@@ -75,8 +75,8 @@ requires `replicaSet=rs0`) for Console, with a `console` database.
 
 ## Redis
 
-A Redis instance is required for Console (session/token cache), reachable
-over TLS with a CA certificate Console can validate against
+A Redis instance is required for Console (session/token cache),
+reachable over TLS with a CA certificate Console can validate against
 (`configurations.redis.tlsCACert`). Catalog, Services, and AI Foundry also
 take token-encryption key material (`authtoolBffKeys.tokenEncKey`) but do
 not expose a Redis host field directly in their `values.yaml` — if their
@@ -84,11 +84,24 @@ underlying components need their own Redis/cache instance, that is
 configured at the subchart level and is not part of this documentation's
 scope.
 
+> **Note:** In case the Redis instace can be reached without TLS, please
+> update the [/charts/console/values.yaml](/charts/console/values.yaml) file
+> with the key `mia-console.configurations.redis.tls` to `false`.
+
 ## Kafka
 
-A Kafka cluster for Catalog's event topics. This repository provisions one
-locally via [`hacks/kafka.sh`](../hacks/kafka.sh), which installs the
-[Strimzi](https://strimzi.io/) Kafka operator (CRDs, then the
+A Kafka cluster for Catalog's event topics, which must include two topics,
+for input events and output events, whose names must be defined inside the
+`catalog.catalogKafkaContext.topics` key in [`charts/catalog/values.yaml](/charts/catalog/values.yaml) file.
+Information on how to connect to this Kafka instance (e.g. bootstrap servers, SASL)
+must be included in the `catalog.catalogKafkaContext.connectionConfig` key in the same
+`values.yaml` file.
+
+### Script `hacks/kafka.sh` to install Kafka with Strimzi
+
+In case a Kafka instance it is not globally available to be used with Mia-Platform Suite,
+this repository provisions one locally via [`hacks/kafka.sh`](../hacks/kafka.sh),
+which installs the [Strimzi](https://strimzi.io/) Kafka operator (CRDs, then the
 `strimzi-kafka-operator` Helm chart with `watchAnyNamespace=true`) into the
 `kafka` namespace, then `kubectl apply`s the manifests in `hacks/kafka/` —
 a single-broker `Kafka` cluster and `KafkaNodePool` (`cluster.yaml`,
