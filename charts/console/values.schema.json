@@ -1,0 +1,9 @@
+{
+    "$schema": "https://json-schema.org/draft-04/schema#",
+    "type": "object",
+    "properties": {
+        "mia-console": {
+            "$ref": "https://cdn.mia-platform.eu/runtime/platform/devops/console-helm-chart/15.0.15-beta.3/values.schema.json"
+        }
+    }
+}

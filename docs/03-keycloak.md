@@ -37,6 +37,8 @@ All configuration lives under the `keycloak-operator` key.
 | `vault.enabled` | Yes | Enables the templated `keycloak-vault-secrets` Secret (see below). |
 | `grafana.enabled` | No | Enables a bundled Grafana dashboard for the operator, optional. |
 
+To have more details on the values you can update, please refer to the [JSON Schema of the Keycloak chart](https://cdn.mia-platform.eu/runtime/platform/auth/keycloak-chart/0.5.4/values.schema.json).
+
 ## Secrets
 
 This chart expects two Kubernetes Secrets to exist (or be created by a

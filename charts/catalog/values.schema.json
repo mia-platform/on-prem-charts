@@ -1,0 +1,9 @@
+{
+    "$schema": "https://json-schema.org/draft-04/schema#",
+    "type": "object",
+    "properties": {
+        "catalog": {
+            "$ref": "https://cdn.mia-platform.eu/runtime/platform/catalog/catalog-helm-chart/0.3.28/values.schema.json"
+        }
+    }
+}

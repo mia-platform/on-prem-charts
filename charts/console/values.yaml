@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./values.schema.json
 # You can use the imageCredentials key to generate a new secret where to store the credentials
 # to download the images from the Mia-Platform Docker Image Hub. The structure is similar to this:
 #
@@ -11,7 +12,7 @@
 # However it is suggested to create the secret manually and then include a reference using the `imagePullSecrets` key
 # like the following:
 imagePullSecrets:
-  - my-mia-platform-repository
+  - name: my-mia-platform-repository
 
 mia-console:
   configurations:

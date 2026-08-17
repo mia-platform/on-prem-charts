@@ -32,6 +32,8 @@ All configuration lives under the `services` key.
 | `telemetry.enabled` / `otelExporterOtlpEndpoint` | No | OpenTelemetry export, disable if you don't run a collector. |
 | `apiGateway.extraVirtualHosts` | Yes | Hostnames the internal API gateway should route for — must include your homepage hostname. |
 
+To have more details on the values you can update, please refer to the [JSON Schema of the Services chart](https://cdn.mia-platform.eu/runtime/platform/services/services-helm-chart/0.2.65/values.schema.json).
+
 ## Secrets
 
 This chart expects a Secret (this repository generates it via

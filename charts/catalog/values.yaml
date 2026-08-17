@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./values.schema.json
 catalog:
   url: "https://catalog.mia-platform.test"
 

@@ -45,6 +45,8 @@ The following configurations lives under the `mia-console` key.
 | `configurations.crudEncryption` | No | ⚠️ Left commented out by default, meaning CRUD data is stored **unencrypted at rest** (see [Overview](01-overview.md#settings-not-suitable-for-production)). Not recommended for production — configure a real key provider (the chart supports GCP KMS; requires real GCP infrastructure: project, key ring, service account) before storing real data. |
 | `configurations.assistant` | No | Console's built-in AI assistant. Disabled by default (`enabled: false`) — to enable it, provide your own LLM provider entries in `llms` and, if used, `embeddings` configuration. |
 
+To have more details on the values you can update, please refer to the [JSON Schema of the Console chart](https://cdn.mia-platform.eu/runtime/platform/devops/console-helm-chart/15.0.15-beta.3/values.schema.json).
+
 ## Secrets
 
 ### Mia-Platform Docker Container Registry

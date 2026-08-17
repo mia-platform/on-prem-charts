@@ -1,0 +1,9 @@
+{
+    "$schema": "https://json-schema.org/draft-04/schema#",
+    "type": "object",
+    "properties": {
+        "ai-foundry": {
+            "$ref": "https://cdn.mia-platform.eu/runtime/platform/ai-foundry/ai-foundry-helm-chart/0.4.79/values.schema.json"
+        }
+    }
+}
