@@ -35,6 +35,8 @@ All configuration lives under the `catalog` key.
 | `mailService.config.host` | Yes (if sending email) | SMTP host for notifications. |
 | `environment` | Yes | Environment label used internally by Catalog (e.g. `local`, `production`). |
 
+To have more details on the values you can update, please refer to the [JSON Schema of the Catalog chart](https://cdn.mia-platform.eu/runtime/platform/catalog/catalog-helm-chart/0.3.28/values.schema.json).
+
 ## Secrets
 
 Generated in this repository via `charts/catalog/render_values.sh`:

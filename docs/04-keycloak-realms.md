@@ -37,6 +37,8 @@ The realm configuration lives in `charts/keycloak-realms/values/prod/`:
 | `production/products.yaml` | `products` | Clients, roles, groups, identity providers, etc. for the `products` realm. |
 | `production/extensibility.yaml` | `extensibility` | Same, for the `extensibility` realm. |
 
+Of each file, you can find more details on the values you can update in the [JSON Schema of the Keycloak Realms chart](https://cdn.mia-platform.eu/runtime/platform/auth/keycloak-realm-management/0.1.28-0/values.schema.json).
+
 `template.sh` renders these into `keycloak-config-cli`-consumable YAML
 under `rendered/<env>/<tier>/<realm-type>/`.
 
