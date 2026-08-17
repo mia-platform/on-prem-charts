@@ -22,12 +22,12 @@ mia-console:
     #   gcpConfig:
     #     email: 'kms-user@my-project.iam.gserviceaccount.com'
     #     projectId: 'my-project'
-    #     location: 'europe'
+    #     location: 'global'
     #     keyRing: 'my-project-keyring'
     #     keyName: 'my-project'
     #     privateKey: 'my-private-key'
     mailSender:
-      senderAddress: "Mia-Platform (no-reply@mia-platform.eu)"
+      senderAddress: "Mia-Platform (no-reply@mia-platform.test)"
       notifier: "smtp"
       smtp:
         host: "email-smtp.eu-west-1.amazonaws.com"

@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=../../../values.schema.json
 keycloak-realm-management:
-  realmId: mia-platform-extensibility
-  realmName: Mia Platform Extensibility
+  realmId: mia-realm-extensibility
+  realmName: Mia Realm Extensibility
   themes:
     login: mia-platform-keycloak-ui
     account: mia-platform-keycloak-ui
@@ -12,31 +12,31 @@ keycloak-realm-management:
     console: true
   urls:
     keycloak: https://auth.mia-platform.test
-    console: https://dev.console.gcp.mia-platform.eu
+    console: https://console.mia-platform.test
   identityProviders:
-    - alias: mia-platform
+    - alias: mia-realm
       config:
         authorizationUrl: https://auth.mia-platform.test/realms/mia-platform-development/protocol/openid-connect/auth
         claimFilterName: organization
         claimFilterValue: mia-platform
         clientId: mia-platform-identity-provider
-        clientSecret: "${vault.mia-platform-identity-provider-client-secret}"
+        clientSecret: "${vault.mia-realm_mia-identity-provider-client-secret}"
         defaultScope: "openid email profile organization:*"
         disableUserInfo: "true"
         filteredByClaim: "true"
         isAccessTokenJWT: "true"
-        issuer: https://auth.mia-platform.test/realms/mia-platform-development
-        jwksUrl: https://auth.mia-platform.test/realms/mia-platform-development/protocol/openid-connect/certs
-        logoutUrl: https://auth.mia-platform.test/realms/mia-platform-development/protocol/openid-connect/logout
+        issuer: https://auth.mia-platform.test/realms/mia-realm
+        jwksUrl: https://auth.mia-platform.test/realms/mia-realm/protocol/openid-connect/certs
+        logoutUrl: https://auth.mia-platform.test/realms/mia-realm/protocol/openid-connect/logout
         pkceEnabled: "true"
         pkceMethod: S256
         sendIdTokenOnLogout: "true"
         syncMode: FORCE
-        tokenIntrospectionUrl: https://auth.mia-platform.test/realms/mia-platform-development/protocol/openid-connect/token/introspect
-        tokenUrl: https://auth.mia-platform.test/realms/mia-platform-development/protocol/openid-connect/token
+        tokenIntrospectionUrl: https://auth.mia-platform.test/realms/mia-realm/protocol/openid-connect/token/introspect
+        tokenUrl: https://auth.mia-platform.test/realms/mia-realm/protocol/openid-connect/token
         useJwksUrl: "true"
-        userInfoUrl: https://auth.mia-platform.test/realms/mia-platform-development/protocol/openid-connect/userinfo
-      displayName: Mia-Platform
+        userInfoUrl: https://auth.mia-platform.test/realms/mia-realm/protocol/openid-connect/userinfo
+      displayName: Mia-Platform Realm
       enabled: true
       firstBrokerLoginFlowAlias: first broker login
       providerId: oidc

@@ -43,10 +43,10 @@ You will need, from that external IdP:
   `/.well-known/openid-configuration`.
 
 This repository's default configuration
-(`charts/keycloak-realms/values/prod/production/extensibility.yaml`, alias
-`mia-platform`) points these at a realm on the same local Keycloak instance,
-purely so the federation flow can be tested end-to-end without a second
-IdP. **Before using this as a reference for production, replace every one
+(`charts/keycloak-realms/values/prod/production/extensibility.yaml`) points
+these at the `mia-realm` realm (or whatever realm name you chose) on the
+same local Keycloak instance, purely so the federation flow can be tested
+end-to-end without a second IdP. **Before using this as a reference for production, replace every one
 of those URLs and the `clientId`/`clientSecret` with your actual external
 IdP's details** — see the client-secret note in
 [Keycloak Realms](04-keycloak-realms.md) for where that secret is
@@ -75,8 +75,8 @@ requires `replicaSet=rs0`) for Console, with a `console` database.
 
 ## Redis
 
-A Redis instance is required for Console (session/token cache), reachable
-over TLS with a CA certificate Console can validate against
+A Redis instance is required for Console (session/token cache),
+reachable over TLS with a CA certificate Console can validate against
 (`configurations.redis.tlsCACert`). Catalog, Services, and AI Foundry also
 take token-encryption key material (`authtoolBffKeys.tokenEncKey`) but do
 not expose a Redis host field directly in their `values.yaml` — if their
@@ -84,15 +84,54 @@ underlying components need their own Redis/cache instance, that is
 configured at the subchart level and is not part of this documentation's
 scope.
 
+> **Note:** In case the Redis instace can be reached without TLS, please
+> update the [/charts/console/values.yaml](/charts/console/values.yaml) file
+> with the key `mia-console.configurations.redis.tls` to `false`.
+
 ## Kafka
 
-A Kafka cluster for Catalog's event topics. This repository provisions a
-[Strimzi](https://strimzi.io/)-managed cluster locally
-(`hacks/kafka/cluster.yaml`) with two topics, `catalog-events.input` and
-`catalog-events.output` (see `hacks/kafka/topics.yaml` for partition/
-retention settings as a reference). `catalog.catalogKafkaContext` in
-`charts/catalog/values.yaml` controls how Catalog connects (bootstrap
-servers, SASL, security protocol).
+A Kafka cluster for Catalog's event topics, which must include two topics,
+for input events and output events, whose names must be defined inside the
+`catalog.catalogKafkaContext.topics` key in [`charts/catalog/values.yaml](/charts/catalog/values.yaml) file.
+Information on how to connect to this Kafka instance (e.g. bootstrap servers, SASL)
+must be included in the `catalog.catalogKafkaContext.connectionConfig` key in the same
+`values.yaml` file.
+
+### Script `hacks/kafka.sh` to install Kafka with Strimzi
+
+In case a Kafka instance it is not globally available to be used with Mia-Platform Suite,
+this repository provisions one locally via [`hacks/kafka.sh`](../hacks/kafka.sh),
+which installs the [Strimzi](https://strimzi.io/) Kafka operator (CRDs, then the
+`strimzi-kafka-operator` Helm chart with `watchAnyNamespace=true`) into the
+`kafka` namespace, then `kubectl apply`s the manifests in `hacks/kafka/` —
+a single-broker `Kafka` cluster and `KafkaNodePool` (`cluster.yaml`,
+`nodepool.yaml`) and the two topics Catalog needs, (which are defined inside
+the `topics.yaml` file, with default values being `catalog-events.input`
+and `catalog-events.output`) into the `catalog` namespace,
+waiting for the operator, cluster, and topics to report `Ready` at each
+step.
+
+The script itself takes no flags; its only configuration points are the
+`KAFKA_NAMESPACE`/`CATALOG_NAMESPACE` environment variables (default
+`kafka`/`catalog`) and the manifests it applies verbatim — there's no
+values/templating layer in front of them. To change cluster sizing
+(replicas, storage, CPU/memory), topic partitioning/retention, or add more
+topics, edit files `nodepool.yaml`, `cluster.yaml` and `topics.yaml` in
+folder `hacks/kafka` directly before running the script, or apply your
+own equivalent manifests against your own Strimzi (or non-Strimzi)
+Kafka installation.
+
+The key `catalog.catalogKafkaContext` inside [`charts/catalog/values.yaml`](../charts/catalog/values.yaml)
+controls how Catalog connects (bootstrap servers, SASL, security protocol)
+and the name of the topics used by the Catalog.
+That's the only piece your own Kafka installation needs to satisfy from Catalog's
+side, regardless of how you provision the cluster.
+
+> **Note:** `hacks/kafka/kafka-ui-configmap.yaml` deploys a
+> [kafbat-ui](https://github.com/kafbat/kafka-ui) instance for browsing the
+> local `catalog-kafka` cluster during development/testing. It isn't part
+> of the product suite and has nothing to do with how Catalog connects.
+> It it suggested to skip it entirely in your own installation.
 
 ## Docker registry access
 

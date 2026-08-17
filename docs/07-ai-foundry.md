@@ -53,7 +53,7 @@ Generated in this repository via `charts/ai-foundry/render_values.sh`:
 - Visit the AI Foundry URL and confirm you can sign in and that the
   cross-links to Console/Catalog/homepage resolve correctly.
 - Sign in with the username/password of the user you created in the
-  `mia-platform` realm (see
+  `mia-realm` realm (or the realm name you chose) (see
   [Keycloak Realms: create a super-admin user](04-keycloak-realms.md#post-install-create-a-super-admin-user)).
   Alternatively, the **Register** button on the login page lets anyone
   create a new user on the spot — those self-registered users only get
