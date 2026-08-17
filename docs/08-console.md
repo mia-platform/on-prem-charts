@@ -24,11 +24,18 @@ helm upgrade --install console charts/console \
 
 ## `values.yaml` reference
 
-All configuration lives under the `mia-console` key.
+At root level, it is required a `imageCredentials` key with the following information:
 
 | Field | Required | Description |
 |---|---|---|
-| `imagePullSecrets` | Yes | Name of your image pull secret in the `console` namespace. |
+| `imagePullSecrets` | No if `imageCredentials` is present | Name of your image pull secret in the `console` namespace. |
+| `imageCredentials` | No if `imagePullSecrets` is present | Definition of the Image Pull Secret to generate. Must include the `name` of the secret, an `username`, a `password`, a `mail` and the `registry` (which is the URL of the registry) |
+| `mia-console` | Yes | Include all the configurations of the Console for the install |
+
+The following configurations lives under the `mia-console` key.
+
+| Field | Required | Description |
+|---|---|---|
 | `configurations.consoleUrl` / `cmsUrl` | Yes | Public URLs for Console and its CMS UI — the `IngressRoute` template derives its `Host()` rules from these, so changing them here is enough. |
 | `configurations.keycloak.protocol` / `host` / `realm` / `extensibilityRealmName` | Yes | Where Console authenticates — must match your [Keycloak](03-keycloak.md)/[Keycloak Realms](04-keycloak-realms.md) setup. |
 | `configurations.redis.hosts` / `username` / `tls` | Yes | Redis connection details (host/port list, auth username, whether to use TLS). |
@@ -40,7 +47,21 @@ All configuration lives under the `mia-console` key.
 
 ## Secrets
 
-Generated in this repository via `charts/console/render_values.sh`:
+### Mia-Platform Docker Container Registry
+
+It is expected that the secret containing the information to authenticate to the Mia-Platform
+Docker Container Registry is created separately from the Chart. However, if you prefer to
+include it during the install of the Console, you can use the `imageCredentials` key in the
+[`values.yaml`](../charts/console/values.yaml) (there's already a suggested structure in the file).
+
+If you already have a secret containing the info to connect to the Registry, you can use the
+`imagePullSecrets` key. This key expects one or more values, suggesting that you can refer to
+multiple sources, and each value should include a secret to connect to a Docker Container Registry.
+
+### Additional Secrets
+
+Secrets required to run the Console services (e.g. private keys and API keys) are
+generated in this repository via [`charts/console/render_values.sh`](charts/console/render_values.sh):
 
 - **`configurations.redis.password`** and **`configurations.redis.tlsCACert`**
   — Redis auth password and the CA certificate to validate Redis's TLS
@@ -55,18 +76,21 @@ Generated in this repository via `charts/console/render_values.sh`:
   this repository).
 - **`configurations.serviceAccountAuthProvider`** — `rsaPrivateKeyBase64`,
   `rsaPrivateKeyId`, `clientIdSalt`: key material Console uses to sign
-  service-account tokens it issues to other products.
-- **`configurations.assistant.keys`** — `azureLlmApiKey`, `github`: API
-  keys for the assistant integration, only meaningful if
-  `configurations.assistant.enabled` is `true`.
 - **`authtoolBff.keys`** — `privateKey`, `cookieSecret`,
   `redisTokenEncKey`: token/cookie encryption key material.
 - **`extensibilityManagerService.keys.registrarPrivateKey`** — key used by
   Console's extensibility manager to register extensibility clients.
+- **`configurations.assistant.keys`** — `azureLlmApiKey`, `github`: API
+  service-account tokens it issues to other products.
+  keys for the assistant integration, only meaningful if
+  `configurations.assistant.enabled` is `true`.
 
 Every value shown in this repository's `render_values.sh` other than the
 Redis/Mongo/SMTP connection info is placeholder/fake dev material — replace
 all of it with your own generated secrets.
+
+You can tweak the file to include your own API Keys and passwords for already existing instances,
+if you already have them (which will be the case in some cases, e.g. the AI API keys)
 
 ## Verify
 

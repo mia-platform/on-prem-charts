@@ -1,7 +1,19 @@
-mia-console:
-  imagePullSecrets:
-    - name: nexus-gcloud
+# You can use the imageCredentials key to generate a new secret where to store the credentials
+# to download the images from the Mia-Platform Docker Image Hub. The structure is similar to this:
+#
+# imageCredentials:
+#   name: my-mia-platform-repository
+#   registry: nexus.mia-platform.eu
+#   username: mia-platform-user
+#   password: mia-platform-pwd
+#   email: email@mia-platform.test
+#
+# However it is suggested to create the secret manually and then include a reference using the `imagePullSecrets` key
+# like the following:
+imagePullSecrets:
+  - my-mia-platform-repository
 
+mia-console:
   configurations:
     consoleUrl: "https://console.mia-platform.test"
     cmsUrl: "https://cms-console.mia-platform.test"
