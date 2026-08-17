@@ -189,7 +189,6 @@ current v15 `charts/console/values.yaml`.
 | `miaconsole.authenticationService` (the whole component)                                       | Removed — Keycloak replaces Console's native auth service entirely.                                                                                                      |
 | `miaconsole.configurations.enableUserSynchronizationWebhooks`                                  | Specific to syncing users from the native auth service; no longer applicable.                                                                                            |
 | `miaconsole.configurations.additionalAuthenticationClients`                                    | No v15 equivalent in this repository's reference values. If in use (e.g. for a local MCP-server login flow), this requires manual review rather than a direct migration. |
-| `imageCredentials.username` / `imageCredentials.password` (root and `miaconsole` level)        | Replaced by a Kubernetes image pull secret — see `imagePullSecrets`/`imageCredentials.name` in [Console](docs/08-console.md).                                            |
 | `miaconsole.configurations.serviceAccountAuthProvider.rsaPrivateKeyPass`                       | No longer part of the schema; the service-account private key is no longer passphrase-protected.                                                                         |
 
 #### Added in v15
