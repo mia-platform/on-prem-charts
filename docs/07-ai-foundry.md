@@ -33,7 +33,7 @@ All configuration lives under the `ai-foundry` key.
 | `aiFoundryWebsite.config.links` | No | Cross-links shown in the AI Foundry UI (Console, Catalog, homepage, and various documentation URLs) — point these at your own products' URLs. |
 | `telemetry.enabled` / `otelExporterOtlpEndpoint` | No | OpenTelemetry export, disable if you don't run a collector. |
 
-To have more details on the values you can update, please refer to the [JSON Schema of the AI Foundry chart](https://cdn.mia-platform.eu/runtime/platform/ai-foundry/ai-foundry-helm-chart/0.4.79/values.schema.json).
+To have more details on the values you can update, please refer to the [JSON Schema of the AI Foundry chart](https://cdn.mia-platform.eu/runtime/platform/ai-foundry/ai-foundry-helm-chart/0.4.82/values.schema.json).
 
 ## Secrets
 
