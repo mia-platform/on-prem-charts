@@ -3,7 +3,7 @@
     "type": "object",
     "properties": {
         "ai-foundry": {
-            "$ref": "https://cdn.mia-platform.eu/runtime/platform/ai-foundry/ai-foundry-helm-chart/0.4.79/values.schema.json"
+            "$ref": "https://cdn.mia-platform.eu/runtime/platform/ai-foundry/ai-foundry-helm-chart/0.4.82/values.schema.json"
         }
     }
 }

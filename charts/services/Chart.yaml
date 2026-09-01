@@ -7,5 +7,5 @@ appVersion: 15.0.0
 
 dependencies:
   - name: services
-    version: 0.2.65
+    version: 0.3.9
     repository: "https://nexus.mia-platform.eu/repository/helm-internal/"

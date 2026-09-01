@@ -1,6 +1,6 @@
 dependencies:
 - name: services
-  repository: https://nexus.mia-platform.eu/repository/helm-internal/
-  version: 0.2.65
-digest: sha256:4a3a65946a0841ed0557b1593c5667f6efa22ac5997717925878c4ec27afd764
-generated: "2026-07-29T09:43:58.476651954+02:00"
+  repository: file:///home/utoniolo/code/git.tools.mia-platform.eu/platform/services/services-helm-chart/
+  version: 0.3.9
+digest: sha256:0c2c08b7e3199025b764aabd2ee44dd5640204c46f1b446d083ce270f6c8c13b
+generated: "2026-08-27T17:41:40.031751716+02:00"

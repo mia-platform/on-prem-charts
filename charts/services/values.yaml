@@ -58,5 +58,9 @@ services:
       - "home.mia-platform.test:443"
       - "*"
 
+  rbacManagement:
+    config:
+      frontendInvitationUrl: "https://home.mia-platform.test/accept-invitations"
+
   swaggerAggregator:
     enabled: true
