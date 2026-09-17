@@ -3,7 +3,7 @@
     "type": "object",
     "properties": {
         "services": {
-            "$ref": "https://cdn.mia-platform.eu/runtime/platform/services/services-helm-chart/0.2.65/values.schema.json"
+            "$ref": "https://cdn.mia-platform.eu/runtime/platform/services/services-helm-chart/0.3.16/values.schema.json"
         }
     }
 }

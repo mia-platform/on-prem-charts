@@ -1,6 +1,6 @@
 dependencies:
 - name: mia-console
   repository: https://nexus.mia-platform.eu/repository/helm-internal/
-  version: 15.0.15-3
-digest: sha256:3437603216a0682c0fceb05ceb8935bf7e2ef18674f744334b8f51779160493f
-generated: "2026-08-21T10:37:17.456780991+02:00"
+  version: 15.1.0
+digest: sha256:884bac6f8a55bec081a60751e4b9c2375e9e19031118285c57075ac429d15a5c
+generated: "2026-09-17T09:56:02.399270598+02:00"

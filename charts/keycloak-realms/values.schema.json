@@ -3,7 +3,7 @@
   "type": "object",
   "properties": {
     "keycloak-realm-management": {
-      "$ref": "https://cdn.mia-platform.eu/runtime/platform/auth/keycloak-realm-management/0.1.28-2/values.schema.json"
+      "$ref": "https://cdn.mia-platform.eu/runtime/platform/auth/keycloak-realm-management/0.1.35/values.schema.json"
     }
   }
 }

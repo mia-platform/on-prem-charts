@@ -19,7 +19,7 @@ catalog:
       securityProtocol: PLAINTEXT
 
   authorizationServer:
-    issuer: "https://auth.mia-platform.test/realms/mia-platform"
+    issuer: "https://auth.mia-platform.test/realms/mia-realm"
 
   telemetry:
     enabled: true

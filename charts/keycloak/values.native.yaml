@@ -1,0 +1,9 @@
+keycloak-operator:
+  mode: manual
+
+  operator:
+    enabled: false
+
+  keycloak:
+    serviceMonitor:
+      enabled: false

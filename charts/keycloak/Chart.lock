@@ -1,6 +1,6 @@
 dependencies:
 - name: keycloak-operator
   repository: https://nexus.mia-platform.eu/repository/helm-internal/
-  version: 0.5.4
-digest: sha256:025487c0371812e8277f2babd5fb6a400c7cb93c9ecf3fcd9a5eb3247272ca47
-generated: "2026-07-29T09:48:48.286959984+02:00"
+  version: 0.6.1
+digest: sha256:e071b2c3a0c9cd52a07720a86d0af8de7cc1aee384860cf0d402ce404151b10e
+generated: "2026-09-17T12:27:20.743648055+02:00"

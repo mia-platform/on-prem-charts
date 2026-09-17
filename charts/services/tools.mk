@@ -10,6 +10,8 @@ else
 	OPEN := xdg-open
 endif
 
+##@ Services chart targets (NAMESPACE required)
+
 HOME_URL := https://home.mia-platform.test
 
 services_open: ## Open the Services website in the default browser
@@ -17,15 +19,14 @@ services_open: ## Open the Services website in the default browser
 	@$(OPEN) "$(HOME_URL)"
 .PHONY: services_open
 
-services_install services_uninstall services_render_secrets: NAMESPACE := services
-services_install services_uninstall services_render_secrets: RELEASE := services
-services_install services_uninstall services_render_secrets: WORKING_DIR := $(CURDIR)/charts/services
+services_install services_install_all_in_one services_uninstall services_render_secrets: RELEASE := services
+services_install services_install_all_in_one services_uninstall services_render_secrets: WORKING_DIR := $(CURDIR)/charts/services
 
 services_render_secrets: # Render charts/services/.local/secrets.yaml from key material in folder .local
 	@$(WORKING_DIR)/render_values.sh
 .PHONY: services_render_secrets
 
-services_install: services_render_secrets ## Install the services chart
+services_install: services_render_secrets ## Install the services chart (requires NAMESPACE=...)
 	@helm dependency build $(WORKING_DIR)
 	@helm upgrade --install $(RELEASE) \
 		--namespace=$(NAMESPACE) --create-namespace \
@@ -35,6 +36,17 @@ services_install: services_render_secrets ## Install the services chart
 		$(WORKING_DIR)
 .PHONY: services_install
 
-services_uninstall: ## Uninstall the services chart
+services_install_all_in_one: services_render_secrets ## Install the services chart with the all-in-one overlay (requires NAMESPACE=...)
+	@helm dependency build $(WORKING_DIR)
+	@helm upgrade --install $(RELEASE) \
+		--namespace=$(NAMESPACE) --create-namespace \
+		--wait --timeout=10m \
+		-f $(WORKING_DIR)/values.yaml \
+		-f $(WORKING_DIR)/values.all-in-one.yaml \
+		-f $(WORKING_DIR)/.local/secrets.yaml \
+		$(WORKING_DIR)
+.PHONY: services_install_all_in_one
+
+services_uninstall: ## Uninstall the services chart (requires NAMESPACE=...)
 	@helm uninstall $(RELEASE) --namespace=$(NAMESPACE)
 .PHONY: services_uninstall

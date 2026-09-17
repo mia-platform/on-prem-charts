@@ -22,13 +22,24 @@ helm upgrade --install console charts/console \
   charts/console
 ```
 
+> **All-in-one layout:** install into the shared namespace
+> (`--namespace default`). Console has **no** `values.all-in-one.yaml`
+> overlay — the `mia-console` chart doesn't support `namespacePrefix`, so
+> it keeps the unprefixed component names (`api-gateway`, `authtool-bff`,
+> `swagger-aggregator`, `mcp-server`). Those names do collide with Services,
+> Catalog, and AI Foundry, so this only works because all three of those are
+> prefixed instead; Console is the one release allowed to stay unprefixed in
+> a shared namespace. In the local `kind` setup that's
+> `make 060_console_all_in_one`; see
+> [Installation layouts](10-overview.md#installation-layouts).
+
 ## `values.yaml` reference
 
 At root level, it is required a `imageCredentials` key with the following information:
 
 | Field | Required | Description |
 |---|---|---|
-| `imagePullSecrets` | No if `imageCredentials` is present | Name of your image pull secret in the `console` namespace. |
+| `imagePullSecrets` | No if `imageCredentials` is present | Name of your image pull secret in the namespace Console is installed into (`console`, or the shared namespace in the all-in-one layout). |
 | `imageCredentials` | No if `imagePullSecrets` is present | Definition of the Image Pull Secret to generate. Must include the `name` of the secret, an `username`, a `password`, a `mail` and the `registry` (which is the URL of the registry) |
 | `mia-console` | Yes | Include all the configurations of the Console for the install |
 
@@ -37,12 +48,12 @@ The following configurations lives under the `mia-console` key.
 | Field | Required | Description |
 |---|---|---|
 | `configurations.consoleUrl` / `cmsUrl` | Yes | Public URLs for Console and its CMS UI — the `IngressRoute` template derives its `Host()` rules from these, so changing them here is enough. |
-| `configurations.keycloak.protocol` / `host` / `realm` / `extensibilityRealmName` | Yes | Where Console authenticates — must match your [Keycloak](03-keycloak.md)/[Keycloak Realms](04-keycloak-realms.md) setup. |
+| `configurations.keycloak.protocol` / `host` / `realm` / `extensibilityRealmName` | Yes | Where Console authenticates — must match your [Keycloak](30-keycloak.md)/[Keycloak Realms](40-keycloak-realms.md) setup. |
 | `configurations.redis.hosts` / `username` / `tls` | Yes | Redis connection details (host/port list, auth username, whether to use TLS). |
 | `configurations.mailSender.senderAddress` / `notifier` / `smtp.host` / `smtp.port` | Yes (if sending email) | SMTP configuration for notifications. |
 | `configurations.audit` | No | Audit-log configuration; defaults are usually fine. |
 | `configurations.enablePrometheusMetrics` | No | Enable if you scrape Prometheus metrics. |
-| `configurations.crudEncryption` | No | ⚠️ Left commented out by default, meaning CRUD data is stored **unencrypted at rest** (see [Overview](01-overview.md#settings-not-suitable-for-production)). Not recommended for production — configure a real key provider (the chart supports GCP KMS; requires real GCP infrastructure: project, key ring, service account) before storing real data. |
+| `configurations.crudEncryption` | No | ⚠️ Left commented out by default, meaning CRUD data is stored **unencrypted at rest** (see [Overview](10-overview.md#settings-not-suitable-for-production)). Not recommended for production — configure a real key provider (the chart supports GCP KMS; requires real GCP infrastructure: project, key ring, service account) before storing real data. |
 | `configurations.assistant` | No | Console's built-in AI assistant. Disabled by default (`enabled: false`) — to enable it, provide your own LLM provider entries in `llms` and, if used, `embeddings` configuration. |
 
 To have more details on the values you can update, please refer to the [JSON Schema of the Console chart](https://cdn.mia-platform.eu/runtime/platform/devops/console-helm-chart/15.0.15-3/values.schema.json).
@@ -63,7 +74,7 @@ multiple sources, and each value should include a secret to connect to a Docker 
 ### Additional Secrets
 
 Secrets required to run the Console services (e.g. private keys and API keys) are
-generated in this repository via [`charts/console/render_values.sh`](charts/console/render_values.sh):
+generated in this repository via [`charts/console/render_values.sh`](../charts/console/render_values.sh):
 
 - **`configurations.redis.password`** and **`configurations.redis.tlsCACert`**
   — Redis auth password and the CA certificate to validate Redis's TLS
@@ -96,11 +107,12 @@ if you already have them (which will be the case in some cases, e.g. the AI API 
 
 ## Verify
 
-- `kubectl get pods -n console` — pods `Running`.
+- `kubectl get pods -n console` — pods `Running`. (All-in-one layout:
+  `kubectl get pods -n default -l app.kubernetes.io/instance=console`.)
 - Visit the Console URL and confirm you can sign in via Keycloak.
 - Sign in with the username/password of the user you created in the
   `mia-realm` realm (or the realm name you chose) (see
-  [Keycloak Realms: create a super-admin user](04-keycloak-realms.md#post-install-create-a-super-admin-user)).
+  [Keycloak Realms: create a super-admin user](40-keycloak-realms.md#post-install-create-a-super-admin-user)).
   Alternatively, the **Register** button on the login page lets anyone
   create a new user on the spot — those self-registered users only get
   regular (non-admin) permissions.

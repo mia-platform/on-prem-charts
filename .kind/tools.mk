@@ -1,6 +1,8 @@
 export KIND_CLUSTER_NAME := mia-on-prem
 export KUBECONFIG := $(CURDIR)/.kind/config
 
+##@ Local cluster provisioning (kind + datastores)
+
 00_init_docker: ## Load docker registry credentials for the cluster
 	@./hacks/docker_cred.sh
 .PHONY: 00_init_docker

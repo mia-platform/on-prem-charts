@@ -4,7 +4,6 @@ ai-foundry:
   isPaaS: false
 
   authzUrl: "https://home.mia-platform.test"
-  rbacAuthzServiceUrl: "http://api-gateway.services.svc.cluster.local:8080"
   catalogUrl: "https://catalog.mia-platform.test"
 
   authtoolBffUrl: "http://authtool-bff"
@@ -20,7 +19,7 @@ ai-foundry:
 
   authorizationServer:
     enabled: true
-    issuer: "https://auth.mia-platform.test/realms/mia-platform"
+    issuer: "https://auth.mia-platform.test/realms/mia-realm"
 
   secrets:
     accessControlKeys:

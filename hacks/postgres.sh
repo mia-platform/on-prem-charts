@@ -82,6 +82,8 @@ kubectl wait --namespace "${POSTGRES_NAMESPACE}" \
     --selector=app.kubernetes.io/instance=postgres,app.kubernetes.io/name=postgresql \
     --timeout=120s
 
+sleep 2;
+
 log_ok "PostgreSQL is ready."
 
 ###############################################################################

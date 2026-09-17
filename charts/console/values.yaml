@@ -23,7 +23,7 @@ mia-console:
     keycloak:
       protocol: "https"
       host: "auth.mia-platform.test"
-      realm: "mia-platform"
+      realm: "mia-realm"
       extensibilityRealmName: "mia-platform-extensibility"
     enablePrometheusMetrics: false
     ####### uncomment these values only if you want to use gcp as a keyProvider

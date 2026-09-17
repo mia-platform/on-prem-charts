@@ -23,12 +23,12 @@ required in that case.
 
 ### Order of operations
 
-Install Keycloak first (see [Keycloak](docs/03-keycloak.md)). Before
+Install Keycloak first (see [Keycloak](docs/30-keycloak.md)). Before
 installing Keycloak Realms, configure identity provider federation in the
 realm values as described below; this replaces the `authProviders`
 configuration previously defined natively in Console. Install Keycloak
 Realms only after this step (see
-[Keycloak Realms](docs/04-keycloak-realms.md)). Before upgrading Console,
+[Keycloak Realms](docs/40-keycloak-realms.md)). Before upgrading Console,
 check the `userInfo` collection for duplicate users as described below —
 this step must be completed before the upgrade, not after. Once these
 steps are complete, update Console's `values.yaml` for v15 and run `helm
@@ -196,7 +196,7 @@ current v15 `charts/console/values.yaml`.
 | v15 field                                                                                   | Purpose                                                                                                    |
 | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | `miaconsole.configurations.keycloak.protocol` / `host` / `realm` / `extensibilityRealmName` | Points Console at the new Keycloak instance and realms. Required.                                          |
-| `miaconsole.authtoolBff.keys` (`privateKey`, `cookieSecret`, `redisTokenEncKey`)            | New BFF component that bridges Keycloak-issued tokens — see [Console secrets](docs/08-console.md#secrets). |
+| `miaconsole.authtoolBff.keys` (`privateKey`, `cookieSecret`, `redisTokenEncKey`)            | New BFF component that bridges Keycloak-issued tokens — see [Console secrets](docs/80-console.md#secrets). |
 | `miaconsole.extensibilityManagerService.keys.registrarPrivateKey`                           | New — used to register extensibility clients.                                                              |
 
 #### Changed structure
@@ -230,6 +230,6 @@ same flag under its pre-v4 name, and v3 does not recognize
 
 ## Troubleshooting
 
-See [`docs/09-troubleshooting.md`](docs/09-troubleshooting.md), which
+See [`docs/90-troubleshooting.md`](docs/90-troubleshooting.md), which
 includes a section dedicated to issues that may arise during this
 migration.

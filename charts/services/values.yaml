@@ -43,7 +43,7 @@ services:
     enabled: true
 
   authorizationServer:
-    issuer: "https://auth.mia-platform.test/realms/mia-platform"
+    issuer: "https://auth.mia-platform.test/realms/mia-realm"
 
   secrets:
     adkBeAppKeys:
@@ -57,6 +57,10 @@ services:
     extraVirtualHosts:
       - "home.mia-platform.test:443"
       - "*"
+
+  rbacManagement:
+    config:
+      frontendInvitationUrl: "https://home.mia-platform.test/accept-invitations"
 
   swaggerAggregator:
     enabled: true

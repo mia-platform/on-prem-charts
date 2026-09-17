@@ -6,15 +6,15 @@ the configuration reference.
 
 ## Contents
 
-1. [Overview](01-overview.md) — components, dependency order, architecture
-2. [Prerequisites](02-prerequisites.md) — cluster, ingress, DNS, datastores
-3. [Keycloak](03-keycloak.md)
-4. [Keycloak Realms](04-keycloak-realms.md)
-5. [Services (Home + Authorization)](05-services.md)
-6. [Catalog](06-catalog.md)
-7. [AI Foundry](07-ai-foundry.md)
-8. [Console](08-console.md)
-9. [Troubleshooting](09-troubleshooting.md)
+1. [Overview](10-overview.md) — components, dependency order, architecture
+2. [Prerequisites](20-prerequisites.md) — cluster, ingress, DNS, datastores
+3. [Keycloak](30-keycloak.md)
+4. [Keycloak Realms](40-keycloak-realms.md)
+5. [Services (Home + Authorization)](50-services.md)
+6. [Catalog](60-catalog.md)
+7. [AI Foundry](70-ai-foundry.md)
+8. [Console](80-console.md)
+9. [Troubleshooting](90-troubleshooting.md)
 
 ## How to read this
 
@@ -29,3 +29,15 @@ needs Services for authorization, and so on). Each product page documents:
 - The secrets it expects, and where that sensitive material should come from
   in your own infrastructure
 - How to verify the product is healthy before moving to the next one
+
+Each page's `helm upgrade --install` example installs the product into a
+namespace of its own, which is what you'll normally want in your own
+infrastructure. This repository's local `kind` setup also supports an
+**all-in-one** layout that puts the whole suite in a single namespace — see
+[Installation layouts](10-overview.md#installation-layouts) for what that
+changes and when it's worth using.
+
+Separately, Keycloak can run either through the Keycloak Operator (default)
+or as a plain StatefulSet with no operator. That choice is independent of
+the namespace layout and applies to Keycloak alone — see
+[Run modes](30-keycloak.md#run-modes-operator-or-native).

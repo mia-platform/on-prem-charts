@@ -38,6 +38,7 @@ jq -n \
                     postgresConnectionString: $pgConnAdk
                 },
                 catalogEngineKeys: {
+                    privateKey: $privateKey,
                     postgresConnectionString: $pgConn
                 },
                 itemsCompressorKeys: {
