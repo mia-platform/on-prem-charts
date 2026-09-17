@@ -43,7 +43,7 @@ services:
     enabled: true
 
   authorizationServer:
-    issuer: "https://auth.mia-platform.test/realms/mia-platform"
+    issuer: "https://auth.mia-platform.test/realms/mia-realm"
 
   secrets:
     adkBeAppKeys:
