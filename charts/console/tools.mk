@@ -10,6 +10,8 @@ else
 	OPEN := xdg-open
 endif
 
+##@ Console chart targets (NAMESPACE required)
+
 CONSOLE_URL := https://console.mia-platform.test
 CMS_CONSOLE_URL := https://cms-console.mia-platform.test
 
@@ -23,7 +25,6 @@ cms_console_open: ## Open the console CMS website in the default browser
 	@$(OPEN) "$(CMS_CONSOLE_URL)"
 .PHONY: cms_console_open
 
-console_install console_uninstall console_render_secrets: NAMESPACE := console
 console_install console_uninstall console_render_secrets: RELEASE := console
 console_install console_uninstall console_render_secrets: WORKING_DIR := $(CURDIR)/charts/console
 
@@ -31,7 +32,7 @@ console_render_secrets: # Render charts/console/.local/secrets.yaml from key mat
 	@$(WORKING_DIR)/render_values.sh
 .PHONY: console_render_secrets
 
-console_install: console_render_secrets ## Install the console chart
+console_install: console_render_secrets ## Install the console chart (requires NAMESPACE=...)
 	@helm dependency build $(WORKING_DIR)
 	@helm upgrade --install $(RELEASE) \
 		--namespace=$(NAMESPACE) --create-namespace \
@@ -41,6 +42,6 @@ console_install: console_render_secrets ## Install the console chart
 		$(WORKING_DIR)
 .PHONY: console_install
 
-console_uninstall: ## Uninstall the console chart
+console_uninstall: ## Uninstall the console chart (requires NAMESPACE=...)
 	@helm uninstall $(RELEASE) --namespace=$(NAMESPACE)
 .PHONY: console_uninstall

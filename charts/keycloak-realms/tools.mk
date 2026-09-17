@@ -10,6 +10,8 @@ else
 	OPEN := xdg-open
 endif
 
+##@ Keycloak Realms targets (no NAMESPACE needed)
+
 KEYCLOAK_URL := https://auth.mia-platform.test
 
 keycloak_open: ## Open the Keycloak admin console in the default browser

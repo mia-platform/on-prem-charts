@@ -28,7 +28,7 @@ as a reference for *what* is needed, not as your installation method.
 
 ## ⚠️ External Identity Provider
 
-The `extensibility` realm (see [Keycloak Realms](04-keycloak-realms.md)) is
+The `extensibility` realm (see [Keycloak Realms](40-keycloak-realms.md)) is
 configured to broker authentication through an **external OIDC-compliant
 identity provider** — your organization's own IdP, or an existing Keycloak
 you already run. This is not optional infrastructure you can skip: without
@@ -49,7 +49,7 @@ same local Keycloak instance, purely so the federation flow can be tested
 end-to-end without a second IdP. **Before using this as a reference for production, replace every one
 of those URLs and the `clientId`/`clientSecret` with your actual external
 IdP's details** — see the client-secret note in
-[Keycloak Realms](04-keycloak-realms.md) for where that secret is
+[Keycloak Realms](40-keycloak-realms.md) for where that secret is
 threaded through.
 
 ## PostgreSQL

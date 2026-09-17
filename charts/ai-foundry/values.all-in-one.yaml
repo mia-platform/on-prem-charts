@@ -1,0 +1,3 @@
+ai-foundry:
+  namespacePrefix: aif
+  authtoolBffUrl: "http://aif-authtool-bff"

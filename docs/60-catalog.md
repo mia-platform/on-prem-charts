@@ -15,6 +15,28 @@ helm upgrade --install catalog charts/catalog \
   charts/catalog
 ```
 
+> **All-in-one layout:** this chart shares component names (`api-gateway`,
+> `authtool-bff`, `adk-be-app`, `access-control`, …) with Services and AI
+> Foundry, so installing it into a shared namespace requires the
+> `values.all-in-one.yaml` overlay, which sets `catalog.namespacePrefix:
+> cat` and renames every resource to `cat-*`:
+>
+> ```
+> helm upgrade --install catalog charts/catalog \
+>   --namespace default --create-namespace \
+>   -f charts/catalog/values.yaml \
+>   -f charts/catalog/values.all-in-one.yaml \
+>   -f <your-secrets-values-file> \
+>   charts/catalog
+> ```
+>
+> Kafka is unaffected: `kafkaKeys.bootstrapServers` is a fully-qualified
+> in-cluster address, so Catalog reaches the same broker from either
+> namespace — and this repository's `hacks/kafka.sh` still creates the
+> topics in the `catalog` namespace even when Catalog itself runs in
+> `default`. In the local `kind` setup that's `make 040_catalog_all_in_one`;
+> see [Installation layouts](10-overview.md#installation-layouts).
+
 ## `values.yaml` reference
 
 All configuration lives under the `catalog` key.
@@ -57,11 +79,13 @@ Generated in this repository via `charts/catalog/render_values.sh`:
 
 ## Verify
 
-- `kubectl get pods -n catalog` — pods `Running`.
+- `kubectl get pods -n catalog` — pods `Running`. (All-in-one layout:
+  `kubectl get pods -n default -l app.kubernetes.io/instance=catalog`, or
+  look for the `cat-` prefixed pods.)
 - Visit the Catalog URL and confirm you can sign in and browse items.
 - Sign in with the username/password of the user you created in the
   `mia-realm` realm (or the realm name you chose) (see
-  [Keycloak Realms: create a super-admin user](04-keycloak-realms.md#post-install-create-a-super-admin-user)).
+  [Keycloak Realms: create a super-admin user](40-keycloak-realms.md#post-install-create-a-super-admin-user)).
   Alternatively, the **Register** button on the login page lets anyone
   create a new user on the spot — those self-registered users only get
   regular (non-admin) permissions.

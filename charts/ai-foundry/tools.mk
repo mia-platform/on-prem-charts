@@ -10,6 +10,8 @@ else
 	OPEN := xdg-open
 endif
 
+##@ AI Foundry chart targets (NAMESPACE required)
+
 AI_FOUNDRY_URL := https://ai-foundry.mia-platform.test
 
 ai_foundry_open: ## Open the ai-foundry website in the default browser
@@ -17,15 +19,14 @@ ai_foundry_open: ## Open the ai-foundry website in the default browser
 	@$(OPEN) "$(AI_FOUNDRY_URL)"
 .PHONY: ai_foundry_open
 
-ai_foundry_install ai_foundry_uninstall ai_foundry_render_secrets: NAMESPACE := ai-foundry
-ai_foundry_install ai_foundry_uninstall ai_foundry_render_secrets: RELEASE := ai-foundry
-ai_foundry_install ai_foundry_uninstall ai_foundry_render_secrets: WORKING_DIR := $(CURDIR)/charts/ai-foundry
+ai_foundry_install ai_foundry_install_all_in_one ai_foundry_uninstall ai_foundry_render_secrets: RELEASE := ai-foundry
+ai_foundry_install ai_foundry_install_all_in_one ai_foundry_uninstall ai_foundry_render_secrets: WORKING_DIR := $(CURDIR)/charts/ai-foundry
 
 ai_foundry_render_secrets: # Render charts/ai-foundry/.local/secrets.yaml from key material in folder .local
 	@$(WORKING_DIR)/render_values.sh
 .PHONY: ai_foundry_render_secrets
 
-ai_foundry_install: ai_foundry_render_secrets ## Install the ai-foundry chart
+ai_foundry_install: ai_foundry_render_secrets ## Install the ai-foundry chart (requires NAMESPACE=...)
 	@helm dependency build $(WORKING_DIR)
 	@helm upgrade --install $(RELEASE) \
 		--namespace=$(NAMESPACE) --create-namespace \
@@ -35,6 +36,17 @@ ai_foundry_install: ai_foundry_render_secrets ## Install the ai-foundry chart
 		$(WORKING_DIR)
 .PHONY: ai_foundry_install
 
-ai_foundry_uninstall: ## Uninstall the ai-foundry chart
+ai_foundry_install_all_in_one: ai_foundry_render_secrets ## Install the ai-foundry chart with the all-in-one overlay (requires NAMESPACE=...)
+	@helm dependency build $(WORKING_DIR)
+	@helm upgrade --install $(RELEASE) \
+		--namespace=$(NAMESPACE) --create-namespace \
+		--wait --timeout=10m \
+		-f $(WORKING_DIR)/values.yaml \
+		-f $(WORKING_DIR)/values.all-in-one.yaml \
+		-f $(WORKING_DIR)/.local/secrets.yaml \
+		$(WORKING_DIR)
+.PHONY: ai_foundry_install_all_in_one
+
+ai_foundry_uninstall: ## Uninstall the ai-foundry chart (requires NAMESPACE=...)
 	@helm uninstall $(RELEASE) --namespace=$(NAMESPACE)
 .PHONY: ai_foundry_uninstall

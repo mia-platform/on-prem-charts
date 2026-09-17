@@ -55,6 +55,22 @@ make keycloak_realms_master_as_admin_install
 make keycloak_realms_production_install
 ```
 
+> **Layout- and mode-independent.** These two targets are the same in both
+> the namespace-per-product and the
+> [all-in-one](10-overview.md#installation-layouts) layouts — and they're
+> the only step that takes no `NAMESPACE`. `keycloak-config-cli` reaches
+> Keycloak over the Admin REST API at its public URL (`KEYCLOAK_URL`), not
+> through the cluster, so where Keycloak was installed makes no difference.
+> `make 020_keycloak_realms` and `make 020_keycloak_realms_all_in_one` both
+> just run the two targets above.
+>
+> The same goes for Keycloak's
+> [run mode](30-keycloak.md#run-modes-operator-or-native): because realms
+> here are imported over the Admin REST API rather than through the
+> operator's `KeycloakRealmImport` custom resource, this step works
+> unchanged when Keycloak is installed in native mode with no operator
+> running.
+
 The first renders and imports the `master` realm, authenticated as the
 Keycloak admin user; the second loops over `products` and `extensibility`,
 authenticated as the `keycloak-config-cli` client created during the
@@ -69,7 +85,7 @@ than this repository's local, `--network host`-based `docker run`.
 ## Import order and credentials
 
 1. **Master realm**, authenticated as the Keycloak admin user
-   (`adminBootstrap.password` from the [Keycloak chart](03-keycloak.md)).
+   (`adminBootstrap.password` from the [Keycloak chart](30-keycloak.md)).
    This is where the `keycloak-config-cli` client itself gets created,
    with a client secret placeholder.
 2. **Products** and **extensibility** realms, authenticated as that
@@ -91,7 +107,7 @@ than this repository's local, `--network host`-based `docker run`.
 >
 > Note that a `${vault.<key>}` placeholder never includes the realm prefix
 > used in `templates/vault.secret.yaml`'s `<realm>_<key>` Secret keys (see
-> [Keycloak](03-keycloak.md)) — only the `<key>` part. This is why the
+> [Keycloak](30-keycloak.md)) — only the `<key>` part. This is why the
 > `products.yaml` and `extensibility.yaml` realm files can both reference
 > `${vault.mia-identity-provider-client-secret}` and still resolve
 > to different values: `keycloak-config-cli` reads it against the
@@ -103,7 +119,7 @@ than this repository's local, `--network host`-based `docker run`.
 > Note specifically that `${vault.mia-identity-provider-client-secret}`
 > is not an arbitrary internal secret — it's the client secret for the
 > **external Identity Provider** federation described in
-> [Prerequisites](02-prerequisites.md#-external-identity-provider). It must
+> [Prerequisites](20-prerequisites.md#-external-identity-provider). It must
 > be the actual `client_secret` (or equivalent) issued by that external
 > IdP for the OIDC client you registered there, not a value you invent.
 

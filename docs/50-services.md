@@ -17,6 +17,24 @@ helm upgrade --install services charts/services \
   charts/services
 ```
 
+> **All-in-one layout:** this chart shares component names (`api-gateway`,
+> `authtool-bff`, `adk-be-app`, `access-control`, …) with Catalog and AI
+> Foundry, so installing it into a shared namespace requires the
+> `values.all-in-one.yaml` overlay, which sets `services.namespacePrefix:
+> svc` and renames every resource to `svc-*`:
+>
+> ```
+> helm upgrade --install services charts/services \
+>   --namespace default --create-namespace \
+>   -f charts/services/values.yaml \
+>   -f charts/services/values.all-in-one.yaml \
+>   -f <your-secrets-values-file> \
+>   charts/services
+> ```
+>
+> In the local `kind` setup that's `make 030_home_all_in_one`. See
+> [Installation layouts](10-overview.md#installation-layouts).
+
 ## `values.yaml` reference
 
 All configuration lives under the `services` key.
@@ -54,12 +72,14 @@ AI Foundry installs, since they need to interoperate.
 
 ## Verify
 
-- `kubectl get pods -n services` — pods `Running`.
+- `kubectl get pods -n services` — pods `Running`. (All-in-one layout:
+  `kubectl get pods -n default -l app.kubernetes.io/instance=services`, or
+  look for the `svc-` prefixed pods.)
 - Visit the homepage URL and confirm you can sign in via Keycloak and see
   the product tiles configured in `hooks.seedData`.
 - Sign in with the username/password of the user you created in the
   `mia-realm` realm (or the realm name you chose) (see
-  [Keycloak Realms: create a super-admin user](04-keycloak-realms.md#post-install-create-a-super-admin-user)).
+  [Keycloak Realms: create a super-admin user](40-keycloak-realms.md#post-install-create-a-super-admin-user)).
   Alternatively, the **Register** button on the login page lets anyone
   create a new user on the spot — those self-registered users only get
   regular (non-admin) permissions.
