@@ -68,6 +68,10 @@ The exact `CREATE USER`/`CREATE DATABASE` statements this repository uses
 locally are in `hacks/postgres/*.sql`, if useful as a reference for the
 grants/extensions each database needs.
 
+> **Note:** Service `adk-be-app` in [Services](./50-services.md) and [Catalog ](./60-catalog.md) connects
+with `asyncpg`, so its connection string must use the
+`postgresql+asyncpg://` scheme.
+
 ## MongoDB
 
 A MongoDB instance (replica-set mode, since the driver connection string

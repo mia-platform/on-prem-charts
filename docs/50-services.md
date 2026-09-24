@@ -46,7 +46,7 @@ All configuration lives under the `services` key.
 | `ingressRoute.enabled` | Yes (if using Traefik) | Disable and configure your own ingress otherwise. |
 | `hooks.seedData.configurations.default.products` | Yes | The product tiles/URLs shown on the homepage — one entry per product you're installing, with its public URL. |
 | `hooks.postgresConnectivityCheck.enabled` / `issuerConnectivityCheck.enabled` | No | Pre-flight checks; enable once your Postgres/Keycloak are reachable. |
-| `secrets.adkBeAppKeys.enabled` / `authtoolBffKeys.enabled` / `rbacManagementKeys.enabled` | Yes | Toggles that gate the Secrets below — must be `true`. |
+| `secrets.adkBeAppKeys.enabled` / `authtoolBffKeys.enabled` / `rbacManagementKeys.enabled` | Yes | Toggles that gate the Secrets below. Set to `true` to have the chart render the Secret from these `values.yaml` fields, or `false` to reuse a Secret you manage outside the chart — see [Bringing your own Secret](#bringing-your-own-secret). |
 | `telemetry.enabled` / `otelExporterOtlpEndpoint` | No | OpenTelemetry export, disable if you don't run a collector. |
 | `apiGateway.extraVirtualHosts` | Yes | Hostnames the internal API gateway should route for — must include your homepage hostname. |
 
@@ -57,8 +57,10 @@ To have more details on the values you can update, please refer to the [JSON Sch
 This chart expects a Secret (this repository generates it via
 `charts/services/render_values.sh` into `.local/secrets.yaml`) providing:
 
-- **`adkBeAppKeys`** — `postgresConnectionString` for the shared `adk`
-  Postgres database.
+- **`adkBeAppKeys.postgresConnectionString`** — connection string to the
+  shared `adk` Postgres database. (`googleApplicationCredentials` is left
+  empty by default — set it if your Vertex AI integration needs a service
+  account key.)
 - **`authtoolBffKeys`** — `tokenEncKey`, `cookieSecret`, `privateKey`: key
   material for token/cookie encryption between products (shared across
   Catalog, Services, and AI Foundry — must be the same value in all three).
@@ -69,6 +71,31 @@ Generate your own values for these in your own secret-management approach
 rather than reusing this repository's `.local/` dev key material — but keep
 `authtoolBffKeys`'s key material identical across the Services, Catalog, and
 AI Foundry installs, since they need to interoperate.
+
+### Bringing your own Secret
+
+Setting a `secrets.*.enabled` flag to `false` stops the chart from rendering
+that Secret at all — instead, the pods read from a Secret of the same name
+that must already exist in the release namespace, so you can manage it
+through your own GitOps flow rather than through `values.yaml`. The
+deployment's restart-on-change annotation adapts accordingly: with
+`enabled: true` it hashes the rendered Secret, with `enabled: false` it
+`lookup`s the existing one in-cluster and hashes that instead, so pods still
+roll on a rotation.
+
+The Secret must be named `<component>-keys` (`<namespacePrefix>-<component>-keys`
+in the all-in-one layout, e.g. `svc-adk-be-app-keys`) and contain these keys,
+matching the fields each chart-rendered Secret would otherwise hold:
+
+- **`adk-be-app-keys`** (`secrets.adkBeAppKeys.enabled`):
+  `postgresConnectionString` and `google-application-credentials.json`
+- **`authtool-bff-keys`** (gated by `secrets.authtoolBffKeys.enabled`):
+  `redis-token-enc.key`, `cookie-secret.key`, plus either `key.pem` (if
+  `authtoolBff.config.tokenAuthMethod` is `private_key_jwt`) or
+  `client-secret` (otherwise).
+- **`rbac-management-keys`** (gated by `secrets.rbacManagementKeys.enabled`):
+  `postgres-connection-string`, plus either `key.pem` or `client-secret` (same
+  `tokenAuthMethod` rule as above).
 
 ## Verify
 

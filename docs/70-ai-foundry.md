@@ -50,7 +50,7 @@ All configuration lives under the `ai-foundry` key.
 | `catalogClientId` / `authzClientId` | Yes | Client IDs registered in Keycloak for calling Catalog/Authorization. |
 | `authorizationServer.issuer` | Yes | Keycloak realm issuer URL. |
 | `ingressRoute.enabled` | Yes (if using Traefik) | Disable and configure your own ingress otherwise. |
-| `secrets.*.enabled` | Yes | Toggles gating each secrets block below — must all be `true`. |
+| `secrets.*.enabled` | Yes | Toggles gating each secrets block below. Set to `true` to have the chart render the Secret from these `values.yaml` fields, or `false` to reuse a Secret you manage outside the chart — see [Bringing your own Secret](#bringing-your-own-secret). |
 | `adkBeApp.config.googleCloudProject` / `googleCloudLocation` / `googleGenaiUseVertexai` | Only if using Vertex AI | GCP project/region; adjust or remove if not using GCP. |
 | `aiFoundryWebsite.config.links` | No | Cross-links shown in the AI Foundry UI (Console, Catalog, homepage, and various documentation URLs) — point these at your own products' URLs. |
 | `telemetry.enabled` / `otelExporterOtlpEndpoint` | No | OpenTelemetry export, disable if you don't run a collector. |
@@ -70,6 +70,35 @@ Generated in this repository via `charts/ai-foundry/render_values.sh`:
   shared `adk` Postgres database. (`googleApplicationCredentials` is left
   empty by default — set it if your Vertex AI integration needs a service
   account key.)
+
+### Bringing your own Secret
+
+Setting a `secrets.*.enabled` flag to `false` stops the chart from rendering
+that Secret at all — instead, the pods read from a Secret of the same name
+that must already exist in the release namespace, so you can manage it
+through your own GitOps flow rather than through `values.yaml`. The
+deployment's restart-on-change annotation adapts accordingly: with
+`enabled: true` it hashes the rendered Secret, with `enabled: false` it
+`lookup`s the existing one in-cluster and hashes that instead, so pods still
+roll on a rotation.
+
+The Secret must be named `<component>-keys` (`<namespacePrefix>-<component>-keys`
+in the all-in-one layout, e.g. `aif-adk-be-app-keys`) and contain these keys:
+
+- **`access-control-keys`** (`secrets.accessControlKeys.enabled`): only
+  rendered/expected if
+  `accessControl.config.externalContext.enabled` and
+  `.authorization.enabled` are both `true`; then `key.pem` if
+  `.authorization.tokenAuthMethod` is `private_key_jwt`, otherwise
+  `client-secret`.
+- **`adk-be-app-keys`** (`secrets.adkBeAppKeys.enabled`):
+  `postgresConnectionString` and `google-application-credentials.json`
+- **`authtool-bff-keys`** (`secrets.authtoolBffKeys.enabled`):
+  `redis-token-enc.key`, `cookie-secret.key`, plus one
+  `<client>-key.pem`/`<client>-client-secret` per entry configured under
+  `authtoolBff.config.clients` (by default `website-key.pem`,
+  `exchangeCatalog-key.pem`, `exchangeAuthz-key.pem`,
+  `exchangeAiServices-key.pem`).
 
 ## Verify
 

@@ -50,7 +50,7 @@ All configuration lives under the `catalog` key.
 | `catalogKafkaContext.connectionConfig` | Yes | Kafka bootstrap-servers/SASL/security-protocol settings — must match your Kafka cluster. |
 | `catalogKafkaContext.topics.input` / `.output` | Yes | Kafka topic names Catalog produces/consumes on — must match the actual topic names on your Kafka cluster, not necessarily this repository's `catalog-events.input`/`catalog-events.output` defaults. |
 | `ingressRoute.enabled` | Yes (if using Traefik) | Disable and configure your own ingress otherwise. |
-| `secrets.*.enabled` | Yes | Toggles gating each secrets block below — must all be `true`. |
+| `secrets.*.enabled` | Yes | Toggles gating each secrets block below. Set to `true` to have the chart render the Secret from these `values.yaml` fields, or `false` to reuse a Secret you manage outside the chart — see [Bringing your own Secret](#bringing-your-own-secret). |
 | `adkBeApp.config.googleCloudProject` / `googleCloudLocation` / `googleGenaiUseVertexai` | Only if using the ADK's Vertex AI integration | GCP project/region for the AI features; omit or adjust if you don't use GCP/Vertex. |
 | `doclingService.enabled` | No | Document-processing companion service, enable if you need it. |
 | `itemsCompressor.config` / `itemsConsumer.config` | Yes | Kafka consumer-group IDs and Postgres cache table/schema names for Catalog's internal processing pipeline. |
@@ -69,13 +69,54 @@ Generated in this repository via `charts/catalog/render_values.sh`:
   `privateKey`s (`website`, `exchange`) — must match Services'/AI Foundry's
   `authtoolBffKeys` key material.
 - **`adkBeAppKeys.postgresConnectionString`** — connection string to the
-  shared `adk` Postgres database.
+  shared `adk` Postgres database. (`googleApplicationCredentials` is left
+  empty by default — set it if your Vertex AI integration needs a service
+  account key.)
 - **`catalogEngineKeys.postgresConnectionString`** and
   **`itemsCompressorKeys.postgresConnectionString`** — connection string to
   the `catalog` Postgres database.
 - **`kafkaKeys.bootstrapServers`** — Kafka bootstrap servers address.
 - **`mailServiceKeys.smtpUsername`/`smtpPassword`** — SMTP credentials, if
   `mailService` is used.
+
+### Bringing your own Secret
+
+Setting a `secrets.*.enabled` flag to `false` stops the chart from rendering
+that Secret at all — instead, the pods read from a Secret of the same name
+that must already exist in the release namespace, so you can manage it
+through your own GitOps flow rather than through `values.yaml`. The
+deployment's restart-on-change annotation adapts accordingly: with
+`enabled: true` it hashes the rendered Secret, with `enabled: false` it
+`lookup`s the existing one in-cluster and hashes that instead, so pods still
+roll on a rotation.
+
+The Secret must be named `<component>-keys` (`<namespacePrefix>-<component>-keys`
+in the all-in-one layout, e.g. `cat-adk-be-app-keys`) and contain these keys:
+
+- **`access-control-keys`** (`secrets.accessControlKeys.enabled`): `key.pem`
+  if `accessControl.config.externalContext.authorization.tokenAuthMethod` is
+  `private_key_jwt`, otherwise `client-secret`.
+- **`adk-be-app-keys`** (`secrets.adkBeAppKeys.enabled`):
+  `postgresConnectionString` and `google-application-credentials.json`
+- **`authtool-bff-keys`** (`secrets.authtoolBffKeys.enabled`):
+  `redis-token-enc.key`, `cookie-secret.key`, plus one
+  `<client>-key.pem`/`<client>-client-secret` per entry configured under
+  `authtoolBff.config.clients` (by default just `website-key.pem`).
+- **`catalog-engine-keys`** (`secrets.catalogEngineKeys.enabled`):
+  `postgres-connection-string`, plus `key.pem` or `client-secret` (same
+  `tokenAuthMethod` rule as above) if
+  `catalogEngine.config.authzServiceAuthorization.enabled` is `true`.
+- **`items-compressor-keys`** (`secrets.itemsCompressorKeys.enabled`):
+  `postgres-connection-string`.
+- **`mail-service-keys`** (`secrets.mailServiceKeys.enabled`):
+  `smtp-username`, `smtp-password`.
+
+`kafkaKeys` follows the same `enabled`/`lookup` mechanics but with a fixed,
+unprefixed Secret name, **`kafka-keys`**, holding `bootstrap.servers`,
+`sasl.username`, `sasl.password` — unless `catalogKafkaContext.embedded.enabled`
+is also `true`, in which case the chart always renders its own `kafka-keys`
+from the embedded cluster's coordinates and the two flags are mutually
+exclusive (the chart fails validation otherwise).
 
 ## Verify
 
