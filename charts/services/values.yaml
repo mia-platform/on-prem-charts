@@ -63,9 +63,5 @@ services:
       - "home.mia-platform.test:443"
       - "*"
 
-  homepageWebsite:
-    image:
-      tag: 0.7.0
-
   swaggerAggregator:
     enabled: true
