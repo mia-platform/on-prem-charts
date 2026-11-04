@@ -123,6 +123,32 @@ These apply if you installed Keycloak with
   `master` realm matches the secret you're using for the
   `client_credentials` grant.
 
+## Identity provider with group provisioning (`mia-platform-oidc`)
+
+These apply if a realm identity provider uses
+`providerId: mia-platform-oidc` — see
+[Keycloak Realms](40-keycloak-realms.md#identity-provider-with-group-provisioning-mia-platform-oidc).
+The Keycloak server log names the identity provider alias in every message
+the provider writes.
+
+- **Login fails after the upstream IdP redirects back.** Provisioning is
+  part of the login, so a SCIM error fails it. Check that Keycloak can reach
+  `miaScimClientEndpoint` (Home's ingress and its TLS certificate, which
+  Keycloak's truststore must trust). Also check that the tenant id in the
+  URL exists.
+- **Token request for `scim-client` is rejected.** The secret Keycloak holds
+  for the `scim-client` client must equal the value of the vault key
+  `mia-realm_scim-client-secret` that `miaScimClientClientSecret` resolves
+  to. See the `${vault....}` known issue in
+  [Keycloak Realms](40-keycloak-realms.md#import-order-and-credentials).
+- **Users are created in Home but get no groups.** The upstream access
+  token is not a JWT (e.g. Okta's org authorization server issues opaque
+  tokens), or it doesn't carry `miaScimClientGroupsClaim`. The log says
+  `is not a readable JWT` in the first case.
+- **Groups assigned by hand in Home disappear.** That's expected: the
+  groups claim is authoritative at every login. Scope the sync with
+  `miaScimClientManagedGroups`.
+
 ## Kafka
 
 - If Catalog can't connect, confirm `catalogKafkaContext.connectionConfig`
@@ -159,6 +185,16 @@ kubectl delete job <job-name> -n <console-namespace>
 Deleting these completed Jobs does not affect your data — it only clears
 the old, immutable Job records so Helm can recreate them as part of the
 upgrade.
+
+## Console bootstrap job fails (`user <email> not found`)
+
+With `bootstrapSuperadmin.enabled: true`, the `create-super-user-binding`
+hook looks up `bootstrapSuperadmin.firstLoginEmail` in Console's `userinfo`
+collection. If that user has never logged in to Console, the Job fails and
+so does the `helm install`/`upgrade`. Make sure the user is in the Keycloak
+group `products/console/guest`, log in to Console once, and run the
+upgrade again. Alternatively, set `bootstrapSuperadmin.enabled: false` to
+get the release through first. See [Console: Bootstrap](80-console.md#bootstrap).
 
 ## Migrating Console from v14.x
 

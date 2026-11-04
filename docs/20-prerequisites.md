@@ -52,6 +52,11 @@ IdP's details** — see the client-secret note in
 [Keycloak Realms](40-keycloak-realms.md) for where that secret is
 threaded through.
 
+If you want your IdP's groups to drive authorization in Home, federate it
+with the `mia-platform-oidc` provider instead of plain `oidc`. Its access
+token must then be a JWT that carries a groups claim. See
+[Identity provider with group provisioning](40-keycloak-realms.md#identity-provider-with-group-provisioning-mia-platform-oidc).
+
 ## PostgreSQL
 
 A PostgreSQL instance reachable from the cluster, with one database and

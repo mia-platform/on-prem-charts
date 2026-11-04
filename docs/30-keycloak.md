@@ -148,7 +148,7 @@ All configuration lives under the `keycloak-operator` key.
 | `keycloak.db.vendor` | Yes | Database vendor, `postgres` in this repo. |
 | `keycloak.db.url` | Yes | JDBC connection URL to your PostgreSQL instance/database. |
 | `keycloak.db.usernameSecret` / `passwordSecret` | Yes | Name/key of a Kubernetes Secret holding the DB credentials (see below). |
-| `keycloak.image.tag` | Yes | Keycloak image tag to deploy. |
+| `keycloak.image.tag` | No | Keycloak image tag to deploy. Not set in this repository, so the operator chart's default is used (`0.3.9-26.8.0-postgres` with `keycloak-operator` 0.7.2, which includes the `mia-platform-oidc` provider). If you pin it, keep a tag that bundles the provider. |
 | `keycloak.truststores` | No | Only needed if Keycloak must trust a custom CA (e.g. to validate other products' client JWKS over TLS with an internal/self-signed certificate). ⚠️ In this repository's default `values.yaml`, this points at a CA bundle built around the local dev `mkcert` CA (see [Overview](10-overview.md#settings-not-suitable-for-production)) — replace it with your organization's real CA before production. |
 | `keycloak.tracing` / `keycloak.telemetry` | No | OpenTelemetry endpoints, disable if you don't run a collector. |
 | `vault.enabled` | Yes | Enables the templated `keycloak-vault-secrets` Secret (see below). |

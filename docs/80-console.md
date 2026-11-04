@@ -162,6 +162,9 @@ On every install/upgrade where the bootstrap is enabled, the hooks run:
 - Sign in with the username/password of the user you created in the
   `mia-realm` realm (or the realm name you chose) (see
   [Keycloak Realms: create a super-admin user](40-keycloak-realms.md#post-install-create-a-super-admin-user)).
+  The user must also be in the **`products/console/guest`** group to
+  access Console. Membership in `products/authz/superadmin` alone isn't
+  enough.
   Alternatively, the **Register** button on the login page lets anyone
   create a new user on the spot — those self-registered users only get
   regular (non-admin) permissions.

@@ -50,6 +50,7 @@ All configuration lives under the `services` key.
 | `telemetry.enabled` / `otelExporterOtlpEndpoint` | No | OpenTelemetry export, disable if you don't run a collector. |
 | `apiGateway.extraVirtualHosts` | Yes | Hostnames the internal API gateway should route for — must include your homepage hostname. |
 | `adkBeApp.config.catalogApiUrl` | Yes | Public URL of the [Catalog](60-catalog.md) instance the homepage agent talks to. |
+| `homepageWebsite.image.tag` | No | Pins the homepage frontend image (`0.7.0` in this repository). |
 | `adkBeApp.config.aiGatewayEnabled` | No | Route the homepage agent's LLM calls through the AI Gateway. `false` in this repository. |
 
 To have more details on the values you can update, please refer to the [JSON Schema of the Services chart](https://cdn.mia-platform.eu/runtime/platform/services/services-helm-chart/0.5.0-rc.17/values.schema.json).
