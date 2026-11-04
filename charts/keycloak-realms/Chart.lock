@@ -1,6 +1,6 @@
 dependencies:
 - name: keycloak-realm-management
   repository: https://nexus.mia-platform.eu/repository/helm-internal/
-  version: 0.1.35
-digest: sha256:cc2c9d1e990d01007eacec478022f7a374801deac598878dfbe27bf6f8460a8c
-generated: "2026-09-17T09:47:13.086668888+02:00"
+  version: 0.1.54
+digest: sha256:7190ecfac5691ce72dd3957897b6a676d0c79617a8b7dd5571498758759c1420
+generated: "2026-11-04T14:54:25.288130052+01:00"

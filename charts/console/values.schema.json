@@ -2,6 +2,18 @@
   "$schema": "https://json-schema.org/draft-04/schema#",
   "type": "object",
   "properties": {
+    "bootstrapSuperadmin": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "firstLoginEmail": {
+          "type": "string"
+        }
+      }
+    },
     "mia-console": {
       "$ref": "https://cdn.mia-platform.eu/runtime/platform/devops/console-helm-chart/15.1.0/values.schema.json"
     }

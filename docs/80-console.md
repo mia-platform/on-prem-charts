@@ -41,6 +41,8 @@ At root level, it is required a `imageCredentials` key with the following inform
 |---|---|---|
 | `imagePullSecrets` | No if `imageCredentials` is present | Name of your image pull secret in the namespace Console is installed into (`console`, or the shared namespace in the all-in-one layout). |
 | `imageCredentials` | No if `imagePullSecrets` is present | Definition of the Image Pull Secret to generate. Must include the `name` of the secret, an `username`, a `password`, a `mail` and the `registry` (which is the URL of the registry) |
+| `bootstrapSuperadmin.enabled` | No | Defaults to `false`. When `true`, Helm post-install/post-upgrade hooks grant Console super-user and CMS permissions to the user identified by `bootstrapSuperadmin.firstLoginEmail` — see [Bootstrap](#bootstrap). |
+| `bootstrapSuperadmin.firstLoginEmail` | Yes if `bootstrapSuperadmin.enabled` is `true` | Email of the bootstrap user. That user must have already logged in to Console at least once. |
 | `mia-console` | Yes | Include all the configurations of the Console for the install |
 
 The following configurations lives under the `mia-console` key.
@@ -56,7 +58,7 @@ The following configurations lives under the `mia-console` key.
 | `configurations.crudEncryption` | No | ⚠️ Left commented out by default, meaning CRUD data is stored **unencrypted at rest** (see [Overview](10-overview.md#settings-not-suitable-for-production)). Not recommended for production — configure a real key provider (the chart supports GCP KMS; requires real GCP infrastructure: project, key ring, service account) before storing real data. |
 | `configurations.assistant` | No | Console's built-in AI assistant. Disabled by default (`enabled: false`) — to enable it, provide your own LLM provider entries in `llms` and, if used, `embeddings` configuration. |
 
-To have more details on the values you can update, please refer to the [JSON Schema of the Console chart](https://cdn.mia-platform.eu/runtime/platform/devops/console-helm-chart/15.0.15-3/values.schema.json).
+To have more details on the values you can update, please refer to the [JSON Schema of the Console chart](https://cdn.mia-platform.eu/runtime/platform/devops/console-helm-chart/15.1.0/values.schema.json).
 
 ## Secrets
 
@@ -105,10 +107,57 @@ all of it with your own generated secrets.
 You can tweak the file to include your own API Keys and passwords for already existing instances,
 if you already have them (which will be the case in some cases, e.g. the AI API keys)
 
+## Bootstrap
+
+Out of the box, no user has administrative rights on Console. The chart
+ships two optional Helm hook Jobs that promote one user, the bootstrap
+user, to Console super-user. They are disabled by default
+(`bootstrapSuperadmin.enabled: false`) because they need that user to
+already exist in Console's `userinfo` collection, and a user only appears
+there after their first login.
+
+1. **Create the bootstrap user in Keycloak.** In the `mia-realm` realm (or
+   the realm name you chose), create the user, or reuse the super-admin
+   user from
+   [Keycloak Realms: create a super-admin user](40-keycloak-realms.md#post-install-create-a-super-admin-user).
+   Add the user to the **`products/console/guest`** group. Without this
+   group the user can't access Console, so step 3 can't create their
+   `userinfo` record.
+2. **Install Console** as described in [Install](#install), leaving
+   `bootstrapSuperadmin.enabled` set to `false`.
+3. **Log in to Console once** with the bootstrap user. This creates the
+   user's document in the `userinfo` collection.
+4. **Enable the bootstrap** in
+   [`charts/console/values.yaml`](../charts/console/values.yaml):
+
+   ```yaml
+   bootstrapSuperadmin:
+     enabled: true
+     firstLoginEmail: "admin@example.com" # the bootstrap user's email
+   ```
+
+   Then run the same `helm upgrade --install` command again.
+
+On every install/upgrade where the bootstrap is enabled, the hooks run:
+
+- `create-super-user-binding` sets the `super-users` binding (role
+  `console-super-user`) to the bootstrap user. The Job overwrites the
+  binding's subjects, so only this user is kept in it.
+- `add-cms-permissions` adds the `console_cms` and `manage_users` groups
+  to the bootstrap user, which grants CMS access and user management.
+
+> ⚠️ If `firstLoginEmail` points to a user who has never logged in to
+> Console, `create-super-user-binding` fails with `user <email> not found`,
+> and the Helm release fails with it. Complete step 3 before enabling the
+> bootstrap. Once the user is promoted, you can set
+> `bootstrapSuperadmin.enabled` back to `false`.
+
 ## Verify
 
 - `kubectl get pods -n console` — pods `Running`. (All-in-one layout:
   `kubectl get pods -n default -l app.kubernetes.io/instance=console`.)
+- If you ran the [Bootstrap](#bootstrap), sign in as the bootstrap user
+  and confirm you have super-user rights and can open the CMS.
 - Visit the Console URL and confirm you can sign in via Keycloak.
 - Sign in with the username/password of the user you created in the
   `mia-realm` realm (or the realm name you chose) (see

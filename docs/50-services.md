@@ -49,8 +49,10 @@ All configuration lives under the `services` key.
 | `secrets.adkBeAppKeys.enabled` / `authtoolBffKeys.enabled` / `rbacManagementKeys.enabled` | Yes | Toggles that gate the Secrets below. Set to `true` to have the chart render the Secret from these `values.yaml` fields, or `false` to reuse a Secret you manage outside the chart — see [Bringing your own Secret](#bringing-your-own-secret). |
 | `telemetry.enabled` / `otelExporterOtlpEndpoint` | No | OpenTelemetry export, disable if you don't run a collector. |
 | `apiGateway.extraVirtualHosts` | Yes | Hostnames the internal API gateway should route for — must include your homepage hostname. |
+| `adkBeApp.config.catalogApiUrl` | Yes | Public URL of the [Catalog](60-catalog.md) instance the homepage agent talks to. |
+| `adkBeApp.config.aiGatewayEnabled` | No | Route the homepage agent's LLM calls through the AI Gateway. `false` in this repository. |
 
-To have more details on the values you can update, please refer to the [JSON Schema of the Services chart](https://cdn.mia-platform.eu/runtime/platform/services/services-helm-chart/0.2.65/values.schema.json).
+To have more details on the values you can update, please refer to the [JSON Schema of the Services chart](https://cdn.mia-platform.eu/runtime/platform/services/services-helm-chart/0.5.0-rc.17/values.schema.json).
 
 ## Secrets
 

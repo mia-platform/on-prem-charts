@@ -14,6 +14,9 @@
 imagePullSecrets:
   - name: my-mia-platform-repository
 
+bootstrapSuperadmin:
+  enabled: false
+
 mia-console:
   configurations:
     consoleUrl: "https://console.mia-platform.test"

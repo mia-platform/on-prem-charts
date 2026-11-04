@@ -1,5 +1,129 @@
 # Migration Guide
 
+## Migrate from v15.1.0 to v15.2.0
+
+This guide applies to installations already running v15.1.0 of this
+repository's charts.
+
+### Scope of the migration
+
+v15.2.0 currently updates only these charts:
+
+- Keycloak (`charts/keycloak`)
+- Keycloak Realms (`charts/keycloak-realms`)
+- Home (`charts/services`)
+- Console (`charts/console`)
+
+Catalog and AI Foundry are unchanged; keep them on v15.1.0.
+
+### Order of operations
+
+Upgrade in the same order as a fresh install: Keycloak, then Keycloak
+Realms, then Home, then Console. For each Helm chart, run
+`helm dependency build charts/<chart>` before `helm upgrade` so the new
+dependency version is pulled.
+
+### Keycloak
+
+| Change | Details |
+|---|---|
+| `keycloak-operator` dependency | `0.6.1` → `0.7.2` |
+| Keycloak `26.6.4` → **`26.8.0`** | Image `0.3.9-26.8.0-postgres`, which includes upstream security fixes. Upgrading is recommended. |
+| New `mia-platform-oidc` identity provider | Built into the image. An OIDC broker that provisions users and their IdP groups into Home's authorization service via SCIM. See [Identity provider with group provisioning](docs/40-keycloak-realms.md#identity-provider-with-group-provisioning-mia-platform-oidc). |
+| New vault key `mia-realm_scim-client-secret` | Secret of the realm's `scim-client`, referenced as `${vault.scim-client-secret}`. Add it to `keycloak-vault-secrets` before re-importing the realms (see [Keycloak: Secrets](docs/30-keycloak.md#secrets)). |
+| Removed `keycloak-operator.…image.tag` override | The pinned `image.tag: "0.3.2-26.6.4-postgres"` is no longer set in `values.yaml`, so the image version shipped with the operator chart is used. If you copied this override into your own values, remove it. |
+
+```sh
+helm dependency build charts/keycloak
+helm upgrade --install keycloak charts/keycloak \
+  --namespace <keycloak-namespace> \
+  -f charts/keycloak/values.yaml \
+  --rollback-on-failure --timeout 5m
+```
+
+### Keycloak Realms
+
+| Change | Details |
+|---|---|
+| `keycloak-realm-management` dependency | `0.1.35` → `0.1.54` |
+| `scim-client` service account | Declared in the `products` realm when `products.authz: true`, with the `authz-api` provisioning roles for users and groups. Its secret comes from the vault key above. |
+
+No realm values file needs to change. To have your existing IdP push users
+and groups into Home, switch it from `providerId: oidc` to
+`providerId: mia-platform-oidc` and add the `miaScimClient*` keys. This is
+optional; see
+[Identity provider with group provisioning](docs/40-keycloak-realms.md#identity-provider-with-group-provisioning-mia-platform-oidc).
+Render the realms again and re-apply
+them with `keycloak-config-cli`, as described in
+[Keycloak Realms](docs/40-keycloak-realms.md#install). In the local setup:
+
+```sh
+make keycloak_realms_master_as_admin_install
+make keycloak_realms_production_install
+```
+
+### Home (Services)
+
+| Change | Details |
+|---|---|
+| `services` dependency | `0.3.16` → `0.5.0-rc.17` (the `values.schema.json` `$ref` is updated to match) |
+| Added `services.adkBeApp.config.catalogApiUrl` | Public URL of your Catalog instance (e.g. `https://catalog.<your-domain>`). |
+| Added `services.adkBeApp.config.aiGatewayEnabled` | Set to `false` unless you run the AI Gateway. |
+| Added `services.homepageWebsite.image.tag` | Pinned to `0.7.0`. |
+| Removed `services.rbacManagement.config.frontendInvitationUrl` | No longer part of the chart's values; delete it from your values. |
+
+```yaml
+services:
+  adkBeApp:
+    config:
+      aiGatewayEnabled: false
+      catalogApiUrl: "https://catalog.<your-domain>"
+
+  homepageWebsite:
+    image:
+      tag: 0.7.0
+
+  # remove:
+  # rbacManagement:
+  #   config:
+  #     frontendInvitationUrl: "..."
+```
+
+```sh
+helm dependency build charts/services
+helm upgrade --install services charts/services \
+  --namespace <services-namespace> \
+  -f charts/services/values.yaml \
+  -f <your-secrets-values-file> \
+  --rollback-on-failure --timeout 5m
+```
+
+### Console
+
+| Change | Details |
+|---|---|
+| `mia-console` dependency | `15.1.0` → `15.2.0-beta.3` |
+| Added `bootstrapSuperadmin.enabled` / `bootstrapSuperadmin.firstLoginEmail` (root level, not under `mia-console`) | Optional. When enabled, Helm hooks grant Console super-user and CMS permissions to the given user. Defaults to `false`. |
+
+Existing installations already have administrators, so you can leave
+`bootstrapSuperadmin.enabled: false`. To use the bootstrap anyway (for
+example, to grant rights to a new admin), first make sure that user is in
+the Keycloak group `products/console/guest` and has logged in to Console
+at least once. Otherwise the hook fails and so does the upgrade. See
+[Console: Bootstrap](docs/80-console.md#bootstrap).
+
+```sh
+helm dependency build charts/console
+helm upgrade --install console charts/console \
+  --namespace <existing-console-namespace> \
+  -f charts/console/values.yaml \
+  -f <your-secrets-values-file> \
+  --rollback-on-failure --timeout 5m
+```
+
+On Helm v3, use `--atomic` instead of `--rollback-on-failure` in the
+commands above.
+
 ## Migrate Mia-Platform Console from v14.x to v15.0.0
 
 This guide applies to on-prem customers who already run Console v14.x and

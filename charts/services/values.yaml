@@ -53,14 +53,19 @@ services:
     rbacManagementKeys:
       enabled: true
 
+  adkBeApp:
+    config:
+      aiGatewayEnabled: false
+      catalogApiUrl: "https://catalog.mia-platform.test"
+
   apiGateway:
     extraVirtualHosts:
       - "home.mia-platform.test:443"
       - "*"
 
-  rbacManagement:
-    config:
-      frontendInvitationUrl: "https://home.mia-platform.test/accept-invitations"
+  homepageWebsite:
+    image:
+      tag: 0.7.0
 
   swaggerAggregator:
     enabled: true
