@@ -66,7 +66,7 @@ make keycloak_realms_production_install
 
 | Change | Details |
 |---|---|
-| `services` dependency | `0.3.16` → `0.5.0-rc.17` (the `values.schema.json` `$ref` is updated to match) |
+| `services` dependency | `0.3.16` → `0.5.0-beta.3` (the `values.schema.json` `$ref` is updated to match) |
 | Added `services.adkBeApp.config.catalogApiUrl` | Public URL of your Catalog instance (e.g. `https://catalog.<your-domain>`). |
 | Added `services.adkBeApp.config.aiGatewayEnabled` | Set to `false` unless you run the AI Gateway. |
 | Added `services.homepageWebsite.image.tag` | Pinned to `0.7.0`. |
