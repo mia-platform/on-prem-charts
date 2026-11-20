@@ -39,6 +39,17 @@ The realm configuration lives in `charts/keycloak-realms/values/prod/`:
 
 Of each file, you can find more details on the values you can update in the [JSON Schema of the Keycloak Realms chart](https://cdn.mia-platform.eu/runtime/platform/auth/keycloak-realm-management/0.1.54/values.schema.json).
 
+Since 15.2, `production/products.yaml` enables the `aiServices` product
+(`products.aiServices: true`, `urls.aiServices`), which makes the realm
+create the AI Services clients — `ai-services-api` (the audience AI Foundry
+exchanges tokens for), `ai-services-access-control`,
+`ai-services-temporal-ui` (its secret is
+`${vault.ai-services-temporal-ui-client-secret}`, see
+[Keycloak: secrets](30-keycloak.md#secrets)) and `ai-services-mcp-gateway`.
+With `aiFoundry` enabled, the realm also creates the
+`ai-foundry-provisioner` service-account client, whose key Keycloak fetches
+from `<AI Foundry url>/.well-known/ai-foundry-provisioner/jwks.json`.
+
 `template.sh` renders these into `keycloak-config-cli`-consumable YAML
 under `rendered/<env>/<tier>/<realm-type>/`.
 

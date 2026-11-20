@@ -12,8 +12,9 @@ infrastructure.
 | 2 | Keycloak Realms | `charts/keycloak-realms` | Configures the `products` and `extensibility` realms on top of the running Keycloak instance. |
 | 3 | Services | `charts/services` | The platform homepage and the authorization (RBAC) service. |
 | 4 | Catalog | `charts/catalog` | The Catalog product. |
-| 5 | AI Foundry | `charts/ai-foundry` | The AI Foundry product. |
-| 6 | Console | `charts/console` | The Console product. |
+| 5 | AI Services | `charts/ai-services` | Shared AI infrastructure: AI gateway (LiteLLM), Temporal, Docling, agent memory. |
+| 6 | AI Foundry | `charts/ai-foundry` | The AI Foundry product. |
+| 7 | Console | `charts/console` | The Console product. |
 
 ## Dependency order
 
@@ -25,13 +26,16 @@ flowchart TD
     A[Keycloak] --> B[Keycloak Realms]
     B --> C[Services]
     C --> D[Catalog]
+    C --> G[AI Services]
     D --> E[AI Foundry]
+    G --> E
     B --> F[Console]
 ```
 
 Console depends directly on Keycloak Realms and does not require Services,
-Catalog, or AI Foundry to be installed first. AI Foundry depends on Catalog
-and Services being in place.
+Catalog, or AI Foundry to be installed first. AI Foundry depends on Catalog,
+Services and AI Services being in place; AI Services needs Services (for
+the caller's authorization context) but not Catalog.
 
 ## Installation layouts
 
@@ -41,7 +45,7 @@ There are two supported layouts:
 ### Namespace-per-product (default)
 
 Each product gets its own namespace — `keycloak`, `services`, `catalog`,
-`ai-foundry`, `console`. This is what every product page in this
+`ai-services`, `ai-foundry`, `console`. This is what every product page in this
 documentation shows, and what you should normally do in your own
 infrastructure: it keeps RBAC, network policies, resource quotas, and
 `kubectl` blast radius scoped per product.
@@ -53,6 +57,7 @@ make 010_keycloak          # or: make 010_keycloak_native (no operator)
 make 020_keycloak_realms
 make 030_home
 make 040_catalog
+make 045_ai_services
 make 050_ai_foundry
 make 060_console
 ```
@@ -70,6 +75,7 @@ make 010_keycloak_all_in_one   # or: make 010_keycloak_all_in_one_native
 make 020_keycloak_realms_all_in_one
 make 030_home_all_in_one
 make 040_catalog_all_in_one
+make 045_ai_services_all_in_one
 make 050_ai_foundry_all_in_one
 make 060_console_all_in_one
 ```
@@ -81,15 +87,15 @@ consistent layout.
 
 #### What the all-in-one overlay changes
 
-Services, Catalog, and AI Foundry are umbrella charts over a shared set of
-components, so out of the box they produce **identically named resources**:
+Services, Catalog, AI Services, and AI Foundry are umbrella charts over a
+shared set of components, so out of the box they produce **identically named resources**:
 `api-gateway`, `authtool-bff`, `access-control`, `adk-be-app`, `cache`,
 `swagger-aggregator`, `docling-service`, `mcp-server`, and the ConfigMaps,
 Secrets, Services, ServiceAccounts, and PodDisruptionBudgets that go with
-them. In separate namespaces that's harmless; in one namespace those three
+them. In separate namespaces that's harmless; in one namespace those four
 releases would collide outright.
 
-Each of those three charts therefore has a `values.all-in-one.yaml` overlay,
+Each of those four charts therefore has a `values.all-in-one.yaml` overlay,
 applied on top of its normal `values.yaml` by the `*_all_in_one` targets,
 which sets a per-product `namespacePrefix`:
 
@@ -97,6 +103,7 @@ which sets a per-product `namespacePrefix`:
 |---|---|---|---|
 | `charts/services` | `values.all-in-one.yaml` | `svc` | `svc-api-gateway`, `svc-authtool-bff`, … |
 | `charts/catalog` | `values.all-in-one.yaml` | `cat` | `cat-api-gateway`, `cat-authtool-bff`, … |
+| `charts/ai-services` | `values.all-in-one.yaml` | `ais` | `ais-api-gateway`, `ais-temporal-frontend`, … |
 | `charts/ai-foundry` | `values.all-in-one.yaml` | `aif` | `aif-api-gateway`, `aif-authtool-bff`, … |
 
 The prefix is applied by the underlying product charts themselves, so every
@@ -104,11 +111,18 @@ in-cluster reference between a product's own components (the envoy upstream
 addresses in its API gateway config, for instance) is renamed consistently
 along with the resources.
 
-One reference is **not** derived automatically and is set explicitly in the
-overlay: AI Foundry's `authtoolBffUrl`, which defaults to
+Two references are **not** derived automatically and are set explicitly in
+AI Foundry's overlay: `authtoolBffUrl`, which defaults to
 `http://authtool-bff`, is overridden to `http://aif-authtool-bff` so it
 still resolves to AI Foundry's own token-exchange service rather than
-another product's.
+another product's; and `aiFoundryWorkflows.config.temporalAddress`, the one
+in-cluster call between two products, is pointed at AI Services' prefixed
+`ais-temporal-frontend`.
+
+The overlays of AI Services and AI Foundry also repoint the in-cluster
+addresses of the observability stack, which is renamed with AI Services:
+the telemetry endpoints at `ais-otel-collector` and AI Foundry's
+`prometheusBaseUrl` at `ais-prometheus`.
 
 **Keycloak and Console have no overlay**, for two different reasons:
 
@@ -116,17 +130,18 @@ another product's.
   so it installs into the shared namespace unchanged.
 - The Console chart does not support `namespacePrefix` at all, so it keeps
   the unprefixed names (`api-gateway`, `authtool-bff`,
-  `swagger-aggregator`, `mcp-server`). That works *only* because all three
-  of the other colliding products are prefixed — Console is the one release
+  `swagger-aggregator`, `mcp-server`). That works *only* because all the
+  other colliding products are prefixed — Console is the one release
   allowed to stay unprefixed. If you add another product to a shared
   namespace, give it a prefix of its own; don't drop one of the existing
   ones.
 
 #### What the all-in-one layout does *not* change
 
-- **The datastores stay where they are.** PostgreSQL, MongoDB, Redis, and
-  Kafka are provisioned by the `hacks/` scripts into their own namespaces
-  (`postgres`, `mongodb`, `redis`, `kafka`/`catalog`) in both layouts. Every
+- **The datastores stay where they are.** PostgreSQL, MongoDB, Redis,
+  Kafka, OpenBao and Langfuse are provisioned by the `hacks/` scripts into
+  their own namespaces (`postgres`, `mongodb`, `redis`, `kafka`/`catalog`,
+  `openbao`, `langfuse`) in both layouts. Every
   connection string the charts use is a fully-qualified in-cluster name
   (e.g. `postgres-postgresql.postgres.svc.cluster.local:5432`,
   `catalog-kafka-kafka-bootstrap.catalog.svc:9092`), so it resolves the same
@@ -185,10 +200,11 @@ are. Always pass it.
 ## What this repository is not
 
 The `hacks/` folder and the root `Makefile`'s cluster-provisioning targets
-(`00_init_docker` through `10_init_redis`) exist solely to stand up a local
+(`00_init_docker` through `12_init_langfuse`) exist solely to stand up a local
 `kind` cluster for development and testing of these charts. They are **not**
 part of the product suite and are not something you need to run — the
-datastores they install (PostgreSQL, MongoDB, Redis, Kafka) and the
+datastores they install (PostgreSQL, MongoDB, Redis, Kafka, OpenBao,
+Langfuse) and the
 ingress/TLS/DNS setup they perform stand in for infrastructure you are
 expected to already have in your own environment. They are referenced in
 this documentation only to identify what a given product needs (e.g. which
@@ -230,6 +246,7 @@ system, so they're not usually worth installing separately.
 > 127.0.0.1 home.mia-platform.test
 > 127.0.0.1 catalog.mia-platform.test
 > 127.0.0.1 ai-foundry.mia-platform.test
+> 127.0.0.1 ai-services.mia-platform.test
 > 127.0.0.1 console.mia-platform.test
 > 127.0.0.1 cms-console.mia-platform.test
 > 127.0.0.1 *.mia-platform.test
@@ -263,6 +280,22 @@ deliberately reconsidered before going to production:
   supports GCP KMS, see the commented example in `values.yaml`) before
   storing real data in production. See [Console](80-console.md) for
   details.
+
+- **AI Services' AI gateway admin API is public.** LiteLLM's whole
+  `/ai-gateway` path, admin API and UI included, is reachable by anyone who
+  can reach the AI Services hostname; the only thing protecting it is
+  `litellmProxyKeys.masterKey`. Use a strong, secret master key and don't
+  expose that hostname more widely than AI Foundry's users need. See
+  [AI Services](65-ai-services.md).
+- **OpenBao runs in dev mode locally.** `hacks/openbao.sh` starts OpenBao
+  with in-memory storage and a fixed root token; in your environment, AI
+  Foundry's `secretStoreService` must point at a real OpenBao/Vault with
+  persistent storage (see [Prerequisites](20-prerequisites.md#openbao-or-vault)).
+- **Langfuse is sized for a laptop locally.** `hacks/langfuse.sh` runs
+  Langfuse with a single ClickHouse and Keeper replica and small volumes;
+  traces hold prompts and completions, so size, back up and restrict access
+  to your own Langfuse accordingly (see
+  [Prerequisites](20-prerequisites.md#langfuse-observability)).
 
 Treat this list as a starting point, not exhaustive — review each product's
 `values.yaml` against your own security requirements rather than assuming

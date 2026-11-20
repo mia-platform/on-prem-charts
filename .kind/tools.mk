@@ -51,7 +51,15 @@ export KUBECONFIG := $(CURDIR)/.kind/config
 	@./hacks/redis.sh
 .PHONY: 10_init_redis
 
-up: 00_init_docker 01_create_cluster 02_init_kyverno 03_init_tls 04_init_traefik 05_init_coredns 06_init_postgres 07_init_kafka 08_init_secrets 09_init_mongo 10_init_redis ## Bring up the full local cluster (cluster + creds + kyverno/ca-trust + tls + traefik + coredns + postgres)
+11_init_openbao: ## Install OpenBao (dev mode) for AI Foundry's secret store
+	@./hacks/openbao.sh
+.PHONY: 11_init_openbao
+
+12_init_langfuse: ## Install Langfuse (+ cert-manager, ClickHouse operator) as the trace store of AI Services and AI Foundry
+	@./hacks/langfuse.sh
+.PHONY: 12_init_langfuse
+
+up: 00_init_docker 01_create_cluster 02_init_kyverno 03_init_tls 04_init_traefik 05_init_coredns 06_init_postgres 07_init_kafka 08_init_secrets 09_init_mongo 10_init_redis 11_init_openbao 12_init_langfuse ## Bring up the full local cluster (cluster + creds + kyverno/ca-trust + tls + traefik + coredns + datastores + openbao + langfuse)
 .PHONY: up
 
 down:

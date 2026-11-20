@@ -6,6 +6,7 @@ include charts/catalog/tools.mk
 include charts/keycloak/tools.mk
 include charts/keycloak-realms/tools.mk
 include charts/services/tools.mk
+include charts/ai-services/tools.mk
 include charts/ai-foundry/tools.mk
 include charts/console/tools.mk
 
@@ -41,6 +42,10 @@ help: ## Show this help
 	@$(MAKE) catalog_install NAMESPACE=catalog
 .PHONY: 040_catalog
 
+045_ai_services: ## installs AI Services (AI gateway, Temporal, Docling, memory)
+	@$(MAKE) ai_services_install NAMESPACE=ai-services
+.PHONY: 045_ai_services
+
 050_ai_foundry: ## installs AI Foundry
 	@$(MAKE) ai_foundry_install NAMESPACE=ai-foundry
 .PHONY: 050_ai_foundry
@@ -71,6 +76,10 @@ help: ## Show this help
 040_catalog_all_in_one: ## [ALL IN ONE] installs catalog
 	@$(MAKE) catalog_install_all_in_one NAMESPACE=default
 .PHONY: 040_catalog_all_in_one
+
+045_ai_services_all_in_one: ## [ALL IN ONE] installs ai-services
+	@$(MAKE) ai_services_install_all_in_one NAMESPACE=default
+.PHONY: 045_ai_services_all_in_one
 
 050_ai_foundry_all_in_one: ## [ALL IN ONE] installs ai-foundry
 	@$(MAKE) ai_foundry_install_all_in_one NAMESPACE=default

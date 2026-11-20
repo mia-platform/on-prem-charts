@@ -21,6 +21,7 @@ as a reference for *what* is needed, not as your installation method.
   | Keycloak | `auth.mia-platform.test` |
   | Services (Home) | `home.mia-platform.test` |
   | Catalog | `catalog.mia-platform.test` |
+  | AI Services | `ai-services.mia-platform.test` |
   | AI Foundry | `ai-foundry.mia-platform.test` |
   | Console | `console.mia-platform.test`, `cms-console.mia-platform.test` |
 
@@ -67,15 +68,26 @@ owner-user per product that needs one:
 | `keycloak` | `keycloak_user` | Keycloak |
 | `authz` | `authz_user` (needs the `pg_trgm` extension) | Services (authorization) |
 | `catalog` | `catalog_user` | Catalog |
-| `adk` | `adk_user` | Services, Catalog, AI Foundry (shared "ADK" component) |
+| `adk` | `adk_user` | Services, Catalog, AI Foundry (shared "ADK" component; in AI Foundry also `ai-foundry-be` and `ai-foundry-workflows`) |
+| `workspace` | `workspace_user` | AI Foundry (`workspace-service`) |
+| `litellm` | `litellm_user` | AI Services (AI gateway) |
+| `temporal`, `temporal_visibility` | `temporal_user` | AI Services (Temporal default and visibility stores) |
+| `memory` | `memory_user` (needs the `vector` extension, i.e. [pgvector](https://github.com/pgvector/pgvector)) | AI Services (`memory-service`) |
 
 The exact `CREATE USER`/`CREATE DATABASE` statements this repository uses
 locally are in `hacks/postgres/*.sql`, if useful as a reference for the
 grants/extensions each database needs.
 
-> **Note:** Service `adk-be-app` in [Services](./50-services.md) and [Catalog ](./60-catalog.md) connects
-with `asyncpg`, so its connection string must use the
-`postgresql+asyncpg://` scheme.
+> **Note:** Service `adk-be-app` in [Services](./50-services.md), [Catalog ](./60-catalog.md)
+and [AI Foundry](./70-ai-foundry.md) connects with `asyncpg`, so its
+connection string must use the `postgresql+asyncpg://` scheme. The same
+applies to AI Foundry's `ai-foundry-workflows` and AI Services'
+`memory-service`; `ai-foundry-be`, `workspace-service` and LiteLLM take a
+plain `postgresql://` URL instead.
+
+> **Note:** Creating the `vector` extension requires a superuser, which is
+> why `hacks/postgres/memory.sql` does it once while creating the database:
+> `memory-service` refuses to start without it but does not create it.
 
 ## MongoDB
 
@@ -141,6 +153,90 @@ side, regardless of how you provision the cluster.
 > local `catalog-kafka` cluster during development/testing. It isn't part
 > of the product suite and has nothing to do with how Catalog connects.
 > It it suggested to skip it entirely in your own installation.
+
+## OpenBao or Vault
+
+AI Foundry's `secret-store-service` keeps the credentials AI Foundry manages
+(API credentials entered in the UI, each tenant's AI gateway key) in an
+[OpenBao](https://openbao.org/) or HashiCorp Vault instance reachable from
+the cluster. AI Foundry does not bundle one. It needs:
+
+- A **KV v2** secrets engine mount (`kv` by default —
+  `ai-foundry.secretStoreService.config.storeKvMount`).
+- A way to sign in, either:
+  - **AppRole** (`config.auth.method: approle`, the default here): a role
+    whose policy allows `create`/`read`/`update`/`patch`/`delete` on
+    `<mount>/data/*` and `read`/`list`/`delete` on `<mount>/metadata/*`.
+    Its `role_id`/`secret_id` go into
+    `secrets.secretStoreServiceKeys.storeRoleId`/`storeSecretId`.
+  - **Kubernetes JWT** (`config.auth.method: jwt`): a JWT auth mount that
+    trusts the cluster's ServiceAccount tokens, and a role bound to the
+    `secret-store-service` ServiceAccount of AI Foundry's namespace
+    (`config.auth.jwt.mount`/`role`). No secret is needed in that case.
+
+### Script `hacks/openbao.sh`
+
+For the local `kind` cluster, [`hacks/openbao.sh`](../hacks/openbao.sh)
+installs OpenBao with its official Helm chart **in dev mode** (in-memory,
+auto-unsealed, root token `root`) into the `openbao` namespace, enables the
+`kv` KV v2 mount and the AppRole method, creates the
+`ai-foundry-secret-store` role and writes its credentials to
+`.local/openbao-role-id` and `.local/openbao-secret-id`, which
+`charts/ai-foundry/render_values.sh` reads. Dev mode loses everything on a
+pod restart: re-run the script, then reinstall AI Foundry so it picks up
+the new AppRole. Do not use dev mode outside a throwaway cluster.
+
+## Langfuse (observability)
+
+AI Services and AI Foundry keep their traces in [Langfuse](https://langfuse.com/)
+(`>= 4.24.0`), installed with its
+[official Helm chart](https://github.com/langfuse/langfuse-k8s). Neither
+chart bundles it. The rest of the observability stack is in the
+`ai-services` chart:
+
+```text
+AI Services + AI Foundry ──OTLP──▶ otelCollector (ai-services) ──traces──▶ Langfuse
+                                                              └──metrics──▶ prometheus (ai-services)
+AI Foundry (ai-foundry-be, adk-be-app) ◀── reads traces from Langfuse, metrics from prometheus
+```
+
+What it needs:
+
+- A Langfuse **project** and its API key pair (`pk-lf-…`/`sk-lf-…`). The
+  collector writes traces with it
+  (`ai-services.secrets.otelCollectorKeys.langfuseOtlpBasic` =
+  `base64(publicKey:secretKey)`) and AI Foundry reads them back with it
+  (`ai-foundry.secrets.aiFoundryBeKeys.langfuseAuthHeader` and
+  `adkBeAppKeys.langfuseAuthHeader` = `Basic base64(publicKey:secretKey)`).
+- Langfuse reachable from the cluster: its OTLP traces endpoint
+  (`…/api/public/otel/v1/traces`) for the collector, its base URL for AI
+  Foundry.
+- The chart's own prerequisites when it deploys ClickHouse (the default):
+  **cert-manager** and the **ClickHouse operator**, installed once per
+  cluster. Or point Langfuse at an external ClickHouse, PostgreSQL, Redis and
+  S3 for production, as its chart documents.
+
+Observability is optional. To run without it, set `otelCollector.enabled`,
+`prometheus.enabled`, `telemetry.enabled` and
+`secrets.otelCollectorKeys.enabled` to `false` in `charts/ai-services`, and in
+`charts/ai-foundry` set `telemetry.enabled: false` and clear `langfuseBaseUrl`
+and `prometheusBaseUrl` under `adkBeApp.config` and `aiFoundryBe.config`. AI
+Foundry's AI Traces, AI Metrics and Insights pages then have no data.
+
+### Script `hacks/langfuse.sh`
+
+For the local `kind` cluster, [`hacks/langfuse.sh`](../hacks/langfuse.sh)
+installs cert-manager, the ClickHouse operator and Langfuse (chart `2.1.0`,
+Langfuse `4.24.0`) into the `langfuse` namespace (in both layouts), with the chart's bundled
+PostgreSQL, Valkey, SeaweedFS and ClickHouse sized for a laptop (one
+ClickHouse and one Keeper replica). Headless initialisation creates the
+`Mia-Platform AI` project and an admin user. The project key pair and the
+admin password are generated once into `.local/langfuse-public-key`,
+`.local/langfuse-secret-key` and `.local/langfuse-admin-password`, which
+`charts/ai-services/render_values.sh` and `charts/ai-foundry/render_values.sh`
+read. The UI is at `https://langfuse.mia-platform.test` (user
+`admin@mia-platform.test`). Usage statistics to Langfuse's servers and public
+sign-up are turned off.
 
 ## Docker registry access
 

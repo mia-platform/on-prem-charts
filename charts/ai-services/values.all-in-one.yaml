@@ -1,0 +1,7 @@
+ai-services:
+  namespacePrefix: ais
+  # The collector is `ais-otel-collector` in `default` in this layout.
+  # Langfuse stays in its own namespace, like the other datastores.
+  telemetry:
+    otelExporterOtlpEndpoint: "http://ais-otel-collector.default.svc.cluster.local:4318"
+    otelExporterOtlpTracesEndpoint: "http://ais-otel-collector.default.svc.cluster.local:4318/v1/traces"

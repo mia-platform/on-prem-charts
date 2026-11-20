@@ -12,9 +12,10 @@ the configuration reference.
 4. [Keycloak Realms](40-keycloak-realms.md)
 5. [Services (Home + Authorization)](50-services.md)
 6. [Catalog](60-catalog.md)
-7. [AI Foundry](70-ai-foundry.md)
-8. [Console](80-console.md)
-9. [Troubleshooting](90-troubleshooting.md)
+7. [AI Services](65-ai-services.md)
+8. [AI Foundry](70-ai-foundry.md)
+9. [Console](80-console.md)
+10. [Troubleshooting](90-troubleshooting.md)
 
 ## How to read this
 

@@ -1,0 +1,6 @@
+dependencies:
+- name: ai-services
+  repository: https://nexus.mia-platform.eu/repository/helm-internal/
+  version: 0.1.0
+digest: sha256:0d57223d02c23134f4e49e821a61f628f31bf83dabe50e2f69b9d315e8066549
+generated: "2026-11-19T20:17:23.447334+01:00"

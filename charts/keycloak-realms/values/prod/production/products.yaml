@@ -14,6 +14,7 @@ keycloak-realm-management:
     console: https://console.mia-platform.test
     consoleCms: https://cms-console.mia-platform.test
     aiFoundry: https://ai-foundry.mia-platform.test
+    aiServices: https://ai-services.mia-platform.test
     flow: https://flow.mia-platform.test
   options:
     isPaaS: false
@@ -23,6 +24,7 @@ keycloak-realm-management:
     console: true
     catalog: true
     aiFoundry: true
+    aiServices: true
     flow: true
   idpSettings:
     enabled: true

@@ -77,4 +77,46 @@ else
     echo "➡️  client-secret already exists, skipping."
 fi
 
+# --- RSA keypair of the AI Foundry provisioner service account ---
+# Kept apart from client-private.pem on purpose: Keycloak accepts an assertion
+# signed with any key of the provisioner client's JWKS, and that account is a
+# platform superadmin.
+if [[ ! -f "$KEY_DIR/provisioner-private.pem" || "$OVERWRITE" == true ]]; then
+    echo "🗝 Creating AI Foundry provisioner RSA ${RSA_BITS}-bit keypair..."
+    openssl genpkey -algorithm RSA -out "$KEY_DIR/provisioner-private.pem" \
+        -pkeyopt rsa_keygen_bits:${RSA_BITS} >/dev/null 2>&1
+    echo "✅ Created provisioner-private.pem"
+else
+    echo "➡️  provisioner-private.pem already exists, skipping."
+fi
+
+echo "🔧 Generating AI Services / AI Foundry key material in: $KEY_DIR"
+
+# --- LiteLLM master key (AI Services AI gateway admin key, also used by ai-foundry-be) ---
+if [[ ! -f "$KEY_DIR/litellm-master-key" || "$OVERWRITE" == true ]]; then
+    echo "🔑 Creating LiteLLM master key..."
+    echo "sk-$(openssl rand -hex 32)" > "$KEY_DIR/litellm-master-key"
+    echo "✅ Created litellm-master-key"
+else
+    echo "➡️  litellm-master-key already exists, skipping."
+fi
+
+# --- LiteLLM salt key (encrypts provider credentials at rest: never rotate in place) ---
+if [[ ! -f "$KEY_DIR/litellm-salt-key" || "$OVERWRITE" == true ]]; then
+    echo "🧂 Creating LiteLLM salt key..."
+    echo "sk-$(openssl rand -hex 32)" > "$KEY_DIR/litellm-salt-key"
+    echo "✅ Created litellm-salt-key"
+else
+    echo "➡️  litellm-salt-key already exists, skipping."
+fi
+
+# --- ai-foundry-be MCP OAuth consent signing key ---
+if [[ ! -f "$KEY_DIR/mcp-consent-key" || "$OVERWRITE" == true ]]; then
+    echo "🔒 Creating MCP consent signing key..."
+    openssl rand -hex 32 > "$KEY_DIR/mcp-consent-key"
+    echo "✅ Created mcp-consent-key"
+else
+    echo "➡️  mcp-consent-key already exists, skipping."
+fi
+
 echo "🎉 All key material ready in: $KEY_DIR"

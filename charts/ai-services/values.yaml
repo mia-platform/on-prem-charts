@@ -1,0 +1,104 @@
+ai-services:
+  # Public URL of AI Services: the edge (Envoy) that fronts the AI gateway
+  # (LiteLLM), Docling, the memory service and the Temporal UI.
+  url: "https://ai-services.mia-platform.test"
+  isPaaS: false
+
+  authzUrl: "https://home.mia-platform.test"
+
+  authorizationServer:
+    enabled: true
+    issuer: "https://auth.mia-platform.test/realms/mia-realm"
+
+  apiGateway:
+    authorizationServer:
+      # Only tokens exchanged for AI Services (by AI Foundry's authtool-bff) or
+      # minted with the `mia:ai-services` scope reach the gated routes.
+      audiences:
+        - ai-services-api
+
+  # Every service of this release exports OTLP to the collector below, over
+  # HTTP. Not gRPC: LiteLLM talks HTTP to the in-release collector, but the
+  # chart also hands it OTEL_EXPORTER_OTLP_TRACES_ENDPOINT from here, and that
+  # signal-specific variable wins for its traces. A gRPC :4317 here makes
+  # LiteLLM post HTTP to the gRPC port: "connection reset", no gateway trace
+  # ever reaches Langfuse (metrics still flow, which hides it). The traces
+  # endpoint carries its /v1/traces path because a signal-specific endpoint
+  # is used as is.
+  telemetry:
+    enabled: true
+    otelExporterOtlpEndpoint: "http://otel-collector.ai-services.svc.cluster.local:4318"
+    otelExporterOtlpTracesEndpoint: "http://otel-collector.ai-services.svc.cluster.local:4318/v1/traces"
+    otelExporterOtlpProtocol: "http/protobuf"
+
+  ingressRoute:
+    enabled: true
+
+  secrets:
+    accessControlKeys:
+      enabled: true
+    # Langfuse project key pair the collector writes traces with
+    # (render_values.sh builds it from .local/langfuse-*-key).
+    otelCollectorKeys:
+      enabled: true
+    litellmProxyKeys:
+      enabled: true
+    memoryServiceKeys:
+      enabled: true
+    temporalKeys:
+      enabled: true
+    temporalUiKeys:
+      enabled: true
+
+  accessControl:
+    enabled: true
+
+  # AI gateway. Models and provider credentials are registered from AI Foundry
+  # (stored in LiteLLM's own database), so no static model_list is needed here.
+  litellmProxy:
+    extraEnv:
+      MCP_TRUSTED_REDIRECT_ORIGINS: "ai-foundry.mia-platform.test"
+
+  # Memory for AI Foundry agents. Without an embedding model, search uses
+  # keyword ranking; see the chart README to route embeddings through the AI
+  # gateway.
+  memoryService:
+    enabled: true
+
+  # Observability. Senders (this release and AI Foundry) push OTLP to the
+  # collector, which splits the signals: traces to Langfuse (installed with its
+  # official chart, hacks/langfuse.sh) and metrics to the Prometheus below.
+  # AI Foundry reads both back for its AI Traces, AI Metrics and Insights
+  # screens. To run without observability, set otelCollector.enabled,
+  # prometheus.enabled, telemetry.enabled and secrets.otelCollectorKeys.enabled
+  # to false (and clear the matching keys in charts/ai-foundry).
+  otelCollector:
+    enabled: true
+    config:
+      langfuse:
+        tracesEndpoint: "http://langfuse-web.langfuse.svc.cluster.local:3000/api/public/otel/v1/traces"
+
+  # Push destination of the collector's metrics (OTLP receiver), read by
+  # AI Foundry's ai-foundry-be and adk-be-app.
+  prometheus:
+    enabled: true
+
+  # Temporal: engine of AI Foundry's Agentic Workflows.
+  temporal:
+    persistence:
+      databaseName: "temporal"
+      visibilityDatabaseName: "temporal_visibility"
+      sql:
+        # Both databases are created beforehand (hacks/postgres/temporal.sql).
+        createDatabase: false
+    namespaces:
+      # Must match `ai-foundry.aiFoundryWorkflows.config.temporalNamespace`.
+      - name: ai-services
+        retention: "168h"
+
+  # The Temporal UI shows every workflow's inputs and payloads: it runs its own
+  # OIDC login against the realm (client `ai-services-temporal-ui`).
+  temporalUi:
+    auth:
+      enabled: true
+      clientId: "ai-services-temporal-ui"

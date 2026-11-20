@@ -200,6 +200,15 @@ values-driven render step) before install:
   takes it from `scimClientSecret` in `.local/secrets.yaml` and falls back to
   `change_me`.
 
+  Since 15.2 the Secret also carries
+  `mia-realm_ai-services-temporal-ui-client-secret`, the secret of the
+  `ai-services-temporal-ui` client the realm creates for the AI Services
+  Temporal UI. The same value must be given to AI Services as
+  `secrets.temporalUiKeys.authClientSecret` (see
+  [AI Services](65-ai-services.md#secrets)). Unlike the identity-provider
+  entries above, it is rendered without surrounding quotes, so the two sides
+  hold exactly the same string.
+
 ## Verify
 
 - `kubectl get pods -n keycloak` — the Keycloak instance and operator pods
