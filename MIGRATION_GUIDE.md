@@ -5,23 +5,36 @@
 This guide applies to installations already running v15.1.0 of this
 repository's charts.
 
+> **AI Services is mandatory from v15.2.0.** It is a new chart
+> (`charts/ai-services`) with no v15.1.0 counterpart, so an upgrade has to
+> **install** it, after Keycloak Realms and before Home. Home 15.2 sends the
+> homepage agent's model calls through its AI gateway, converts chat
+> attachments with its Docling and seeds its service accounts. AI Foundry
+> 15.2 also runs its workflows on its Temporal. Plan for its prerequisites
+> before you start: the `litellm`, `temporal`, `temporal_visibility` and
+> `memory` PostgreSQL databases (`memory` with `pgvector`), and, if you keep
+> observability on, a Langfuse project. See [AI Services](#ai-services-new).
+
 ### Scope of the migration
 
-v15.2.0 currently updates only these charts:
+v15.2.0 updates these charts:
 
 - Keycloak (`charts/keycloak`)
 - Keycloak Realms (`charts/keycloak-realms`)
+- **AI Services (`charts/ai-services`), new and mandatory**
 - Home (`charts/services`)
+- AI Foundry (`charts/ai-foundry`)
 - Console (`charts/console`)
 
-Catalog and AI Foundry are unchanged; keep them on v15.1.0.
+Catalog is unchanged; keep it on v15.1.0.
 
 ### Order of operations
 
 Upgrade in the same order as a fresh install: Keycloak, then Keycloak
-Realms, then Home, then Console. For each Helm chart, run
-`helm dependency build charts/<chart>` before `helm upgrade` so the new
-dependency version is pulled.
+Realms, then **install** AI Services, then Home, then AI Foundry. Console
+depends only on Keycloak and its realms, so it can be upgraded at any point
+after them. For each Helm chart, run `helm dependency build charts/<chart>`
+before `helm upgrade` so the new dependency version is pulled.
 
 ### Keycloak
 
@@ -31,6 +44,7 @@ dependency version is pulled.
 | Keycloak `26.6.4` → **`26.8.0`** | Image `0.3.9-26.8.0-postgres`, which includes upstream security fixes. Upgrading is recommended. |
 | New `mia-platform-oidc` identity provider | Built into the image. An OIDC broker that provisions users and their IdP groups into Home's authorization service via SCIM. See [Identity provider with group provisioning](docs/40-keycloak-realms.md#identity-provider-with-group-provisioning-mia-platform-oidc). |
 | New vault key `mia-realm_scim-client-secret` | Secret of the realm's `scim-client`, referenced as `${vault.scim-client-secret}`. Add it to `keycloak-vault-secrets` before re-importing the realms (see [Keycloak: Secrets](docs/30-keycloak.md#secrets)). |
+| New vault key `mia-realm_ai-services-temporal-ui-client-secret` | Secret of the realm's `ai-services-temporal-ui` client, referenced as `${vault.ai-services-temporal-ui-client-secret}`. Add it before re-importing the realms. AI Services must get the same value as `secrets.temporalUiKeys.authClientSecret`. |
 | Removed `keycloak-operator.…image.tag` override | The pinned `image.tag: "0.3.2-26.6.4-postgres"` is no longer set in `values.yaml`, so the image version shipped with the operator chart is used. If you copied this override into your own values, remove it. |
 
 ```sh
@@ -47,8 +61,19 @@ helm upgrade --install keycloak charts/keycloak \
 |---|---|
 | `keycloak-realm-management` dependency | `0.1.35` → `0.1.54` |
 | `scim-client` service account | Declared in the `products` realm when `products.authz: true`, with the `authz-api` provisioning roles for users and groups. Its secret comes from the vault key above. |
+| New `aiServices` product (**required**) | `production/products.yaml` adds `products.aiServices: true` and `urls.aiServices: https://ai-services.<your-domain>`. The realm then creates the AI Services clients: `ai-services-api` (token-exchange audience), `ai-services-access-control`, `ai-services-temporal-ui` and `ai-services-mcp-gateway`. With `aiFoundry` enabled it also creates the `ai-foundry-provisioner` client. See [Keycloak Realms](docs/40-keycloak-realms.md). |
 
-No realm values file needs to change. To have your existing IdP push users
+Add the `aiServices` entries to your `products.yaml`:
+
+```yaml
+keycloak-realm-management:
+  urls:
+    aiServices: https://ai-services.<your-domain>
+  products:
+    aiServices: true
+```
+
+No other realm value needs to change. To have your existing IdP push users
 and groups into Home, switch it from `providerId: oidc` to
 `providerId: mia-platform-oidc` and add the `miaScimClient*` keys. This is
 optional; see
@@ -62,26 +87,112 @@ make keycloak_realms_master_as_admin_install
 make keycloak_realms_production_install
 ```
 
+### AI Services (new)
+
+AI Services is a new, **mandatory** product: the shared AI infrastructure
+(AI gateway on LiteLLM, Temporal, Docling, agent memory, OpenTelemetry
+Collector and Prometheus) that Home and AI Foundry 15.2 run on. Nothing to
+upgrade here: install it fresh, after Keycloak Realms and before Home.
+
+Before installing it:
+
+- Create its PostgreSQL databases: `litellm`, `temporal`,
+  `temporal_visibility` and `memory` (`memory` needs the `vector`
+  extension). See [Prerequisites: PostgreSQL](docs/20-prerequisites.md#postgresql).
+- Make sure the realms were re-imported with the `aiServices` product and
+  the `ai-services-temporal-ui` vault key (see the two sections above).
+- Choose the LiteLLM master key (`litellmProxyKeys.masterKey`). AI Foundry
+  15.2 must get the same value as `aiFoundryBeKeys.litellmAdminKey`.
+  Choose the `saltKey` once: it can't be rotated after models are
+  registered.
+- To keep observability on, prepare a Langfuse project and give its key
+  pair to the collector (`otelCollectorKeys`); otherwise turn
+  `otelCollector`, `prometheus` and `telemetry` off. See
+  [Prerequisites: Langfuse](docs/20-prerequisites.md#langfuse-observability).
+
+```sh
+helm dependency build charts/ai-services
+helm upgrade --install ai-services charts/ai-services \
+  --namespace ai-services --create-namespace \
+  -f charts/ai-services/values.yaml \
+  -f <your-secrets-values-file> \
+  --rollback-on-failure --timeout 10m
+```
+
+Its values and secrets are described in
+[AI Services](docs/45-ai-services.md). Its token-gated routes (Docling,
+memory) call Home's authorization service, so they answer only after Home is
+upgraded too.
+
 ### Home (Services)
 
 | Change | Details |
 |---|---|
-| `services` dependency | `0.3.16` → `0.5.0-beta.3` (the `values.schema.json` `$ref` is updated to match) |
+| `services` dependency | `0.3.16` → `0.5.0` (the `values.schema.json` `$ref` is updated to match) |
+| Added `services.aiServicesClientId` | `ai-services-api`: audience of the token exchange towards AI Services. |
 | Added `services.adkBeApp.config.catalogApiUrl` | Public URL of your Catalog instance (e.g. `https://catalog.<your-domain>`). |
-| Added `services.adkBeApp.config.aiGatewayEnabled` | Set to `false` unless you run the AI Gateway. |
-| Added `services.homepageWebsite.image.tag` | Pinned to `0.7.0`. |
+| Added `services.adkBeApp.config.aiGatewayEnabled` | `true`: the homepage agent's model calls go through AI Services' AI gateway. |
+| Added `services.adkBeApp.config.litellmProxyApiBase` | `https://ai-services.<your-domain>/ai-gateway/`. Required with the gateway on. |
+| Added `services.adkBeApp.config.secretStoreBaseUrl` | `https://ai-services.<your-domain>`. The agent reads the tenant's AI gateway key there. Required with the gateway on. |
+| Changed `services.telemetry` | `enabled: false` → `true`, exporting to AI Services' collector (`http://otel-collector.<ai-services-namespace>.svc.cluster.local:4317`, `otelExporterOtlpProtocol: grpc`), for every component of the chart. Keep `false` if you run AI Services without observability. |
+| Added `services.adkBeApp.config.otelExporterOtlpEndpoint` / `otelExporterOtlpProtocol` | The agent runtime exports over OTLP/HTTP to the same collector (`:4318`, `http/protobuf`). |
+| Added `services.apiGateway.docling.url` | `https://ai-services.<your-domain>/api/docling/`: chat attachments are converted by AI Services. Empty disables the route. |
+| Added `services.hooks.seedAuthzResources` / `seedSystemRoles` / `seedBuiltinGroups` | New seed hooks for the authorization resources, system roles and built-in groups. Off in the chart, **enabled** in this repository's values. |
+| Added `services.hooks.seedServiceAccounts` (`enabled`, `products.<product>.url`) | Registers the system service accounts in Keycloak and in the `authz` database, as the `authz-registrar` client. Set the public URL of each product you run (`ai-foundry`, `ai-services`, `authz`, `catalog`, `console`, `flow`). Existing clients are left untouched. Enabled in this repository's values. |
+| Added `mcpServers` under `services.hooks.seedData.configurations.default.products.<product>` | MCP servers listed for each product: AI Foundry, memory and MCP gateway (AI Services), Catalog MCP, Services MCP. Optional. |
+| Changed `services.hooks.postgresConnectivityCheck.enabled` / `issuerConnectivityCheck.enabled` | `false` → `true`: pre-flight checks that Postgres and the Keycloak issuer are reachable. |
 | Removed `services.rbacManagement.config.frontendInvitationUrl` | No longer part of the chart's values; delete it from your values. |
+
+See [Services](docs/50-services.md#valuesyaml-reference) for every field.
 
 ```yaml
 services:
+  aiServicesClientId: "ai-services-api"
+
+  telemetry:
+    enabled: true
+    otelExporterOtlpEndpoint: "http://otel-collector.<ai-services-namespace>.svc.cluster.local:4317"
+    otelExporterOtlpProtocol: "grpc"
+
+  hooks:
+    postgresConnectivityCheck:
+      enabled: true
+    issuerConnectivityCheck:
+      enabled: true
+    seedAuthzResources:
+      enabled: true
+    seedBuiltinGroups:
+      enabled: true
+    seedSystemRoles:
+      enabled: true
+    seedServiceAccounts:
+      enabled: true
+      products:
+        ai-foundry:
+          url: "https://ai-foundry.<your-domain>"
+        ai-services:
+          url: "https://ai-services.<your-domain>"
+        authz:
+          url: "https://home.<your-domain>"
+        catalog:
+          url: "https://catalog.<your-domain>"
+        console:
+          url: "https://console.<your-domain>"
+        flow:
+          url: "https://flow.<your-domain>"
+
   adkBeApp:
     config:
-      aiGatewayEnabled: false
+      aiGatewayEnabled: true
       catalogApiUrl: "https://catalog.<your-domain>"
+      litellmProxyApiBase: "https://ai-services.<your-domain>/ai-gateway/"
+      secretStoreBaseUrl: "https://ai-services.<your-domain>"
+      otelExporterOtlpEndpoint: "http://otel-collector.<ai-services-namespace>.svc.cluster.local:4318"
+      otelExporterOtlpProtocol: "http/protobuf"
 
-  homepageWebsite:
-    image:
-      tag: 0.7.0
+  apiGateway:
+    docling:
+      url: "https://ai-services.<your-domain>/api/docling/"
 
   # remove:
   # rbacManagement:
@@ -98,11 +209,36 @@ helm upgrade --install services charts/services \
   --rollback-on-failure --timeout 5m
 ```
 
+The homepage agent reads the tenant's AI gateway key minted by AI Foundry,
+so it can call a model only after AI Foundry 15.2 is upgraded and a model is
+registered.
+
+### AI Foundry
+
+| Change | Details |
+|---|---|
+| `ai-foundry` dependency | `0.4.83-0` → `0.5.0` |
+| New components | `ai-foundry-be`, `ai-foundry-provisioner`, `ai-foundry-workflows`, `workspace-service`, `secret-store-service`, each with its own Secret. Docling moved to AI Services. |
+| New prerequisites | AI Services, an OpenBao/Vault KV v2 store, the `workspace` database. |
+
+The full list of values to add, change and remove (AI gateway, Temporal,
+OpenBao, telemetry, the removed Vertex AI settings) is in
+[AI Foundry: Upgrading from 15.1](docs/70-ai-foundry.md#upgrading-from-151).
+
+```sh
+helm dependency build charts/ai-foundry
+helm upgrade --install ai-foundry charts/ai-foundry \
+  --namespace <ai-foundry-namespace> \
+  -f charts/ai-foundry/values.yaml \
+  -f <your-secrets-values-file> \
+  --rollback-on-failure --timeout 10m
+```
+
 ### Console
 
 | Change | Details |
 |---|---|
-| `mia-console` dependency | `15.1.0` → `15.2.0-beta.3` |
+| `mia-console` dependency | `15.1.0` → `15.2.0-0` |
 | Added `bootstrapSuperadmin.enabled` / `bootstrapSuperadmin.firstLoginEmail` (root level, not under `mia-console`) | Optional. When enabled, Helm hooks grant Console super-user and CMS permissions to the given user. Defaults to `false`. |
 
 Existing installations already have administrators, so you can leave

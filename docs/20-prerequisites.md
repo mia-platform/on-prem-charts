@@ -195,8 +195,8 @@ chart bundles it. The rest of the observability stack is in the
 `ai-services` chart:
 
 ```text
-AI Services + AI Foundry ──OTLP──▶ otelCollector (ai-services) ──traces──▶ Langfuse
-                                                              └──metrics──▶ prometheus (ai-services)
+AI Services + Services + AI Foundry ──OTLP──▶ otelCollector (ai-services) ──traces──▶ Langfuse
+                                                                         └──metrics──▶ prometheus (ai-services)
 AI Foundry (ai-foundry-be, adk-be-app) ◀── reads traces from Langfuse, metrics from prometheus
 ```
 
@@ -220,7 +220,8 @@ Observability is optional. To run without it, set `otelCollector.enabled`,
 `prometheus.enabled`, `telemetry.enabled` and
 `secrets.otelCollectorKeys.enabled` to `false` in `charts/ai-services`, and in
 `charts/ai-foundry` set `telemetry.enabled: false` and clear `langfuseBaseUrl`
-and `prometheusBaseUrl` under `adkBeApp.config` and `aiFoundryBe.config`. AI
+and `prometheusBaseUrl` under `adkBeApp.config` and `aiFoundryBe.config`; in
+`charts/services` set `telemetry.enabled: false`. AI
 Foundry's AI Traces, AI Metrics and Insights pages then have no data.
 
 ### Script `hacks/langfuse.sh`

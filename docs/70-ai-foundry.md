@@ -20,7 +20,7 @@ converted by AI Services (`apiGateway.docling.url`).
 
 ## Install
 
-Install [AI Services](65-ai-services.md) first.
+Install [AI Services](45-ai-services.md) first.
 
 ```
 helm dependency build charts/ai-foundry
@@ -161,7 +161,7 @@ exact key names it expects.
 
 ## Upgrading from 15.1
 
-- Install [AI Services](65-ai-services.md) and an OpenBao/Vault store before
+- Install [AI Services](45-ai-services.md) and an OpenBao/Vault store before
   upgrading, and create the new databases (`workspace`, plus AI Services'
   ones) — see [Prerequisites](20-prerequisites.md).
 - Upgrade [Keycloak Realms](40-keycloak-realms.md) first: the realm must have

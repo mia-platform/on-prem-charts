@@ -34,6 +34,10 @@ help: ## Show this help
 	@$(MAKE) keycloak_realms_production_install
 .PHONY: 020_keycloak_realms
 
+025_ai_services: ## installs AI Services (AI gateway, Temporal, Docling, memory)
+	@$(MAKE) ai_services_install NAMESPACE=ai-services
+.PHONY: 025_ai_services
+
 030_home: ## installs home + RBAC access control systems
 	@$(MAKE) services_install NAMESPACE=services
 .PHONY: 030_home
@@ -41,10 +45,6 @@ help: ## Show this help
 040_catalog: ## installs Catalog
 	@$(MAKE) catalog_install NAMESPACE=catalog
 .PHONY: 040_catalog
-
-045_ai_services: ## installs AI Services (AI gateway, Temporal, Docling, memory)
-	@$(MAKE) ai_services_install NAMESPACE=ai-services
-.PHONY: 045_ai_services
 
 050_ai_foundry: ## installs AI Foundry
 	@$(MAKE) ai_foundry_install NAMESPACE=ai-foundry
@@ -69,6 +69,10 @@ help: ## Show this help
 	@$(MAKE) keycloak_realms_production_install
 .PHONY: 020_keycloak_realms_all_in_one
 
+025_ai_services_all_in_one: ## [ALL IN ONE] installs ai-services
+	@$(MAKE) ai_services_install_all_in_one NAMESPACE=default
+.PHONY: 025_ai_services_all_in_one
+
 030_home_all_in_one: ## [ALL IN ONE] installs home + RBAC access control systems
 	@$(MAKE) services_install_all_in_one NAMESPACE=default
 .PHONY: 030_home_all_in_one
@@ -76,10 +80,6 @@ help: ## Show this help
 040_catalog_all_in_one: ## [ALL IN ONE] installs catalog
 	@$(MAKE) catalog_install_all_in_one NAMESPACE=default
 .PHONY: 040_catalog_all_in_one
-
-045_ai_services_all_in_one: ## [ALL IN ONE] installs ai-services
-	@$(MAKE) ai_services_install_all_in_one NAMESPACE=default
-.PHONY: 045_ai_services_all_in_one
 
 050_ai_foundry_all_in_one: ## [ALL IN ONE] installs ai-foundry
 	@$(MAKE) ai_foundry_install_all_in_one NAMESPACE=default

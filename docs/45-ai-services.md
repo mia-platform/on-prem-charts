@@ -1,22 +1,30 @@
 # AI Services
 
 Chart: `charts/ai-services` · Depends on: Keycloak Realms (`aiServices`
-product), Services, PostgreSQL (`litellm`, `temporal`,
-`temporal_visibility`, `memory`)
+product), PostgreSQL (`litellm`, `temporal`, `temporal_visibility`,
+`memory`)
 
-Installs AI Services, the shared AI infrastructure AI Foundry runs on:
+Installs AI Services, the shared AI infrastructure Services and AI Foundry
+run on:
 
 | Component | What it does | Who calls it |
 |---|---|---|
-| `api-gateway` (Envoy) + `access-control` | The product's edge, published at `url`. Verifies the caller's token (issuer + `ai-services-api` audience) before the gated routes. | AI Foundry, MCP clients |
-| `litellm-proxy` | The **AI gateway**, at `/ai-gateway`. Every model call of AI Foundry goes through it; models, provider credentials, teams and virtual keys live in its own database. | `adk-be-app`, `ai-foundry-be` (admin API, with the master key) |
+| `api-gateway` (Envoy) + `access-control` | The product's edge, published at `url`. Verifies the caller's token (issuer + `ai-services-api` audience) before the gated routes. | Services, AI Foundry, MCP clients |
+| `litellm-proxy` | The **AI gateway**, at `/ai-gateway`. Every model call of Services and AI Foundry goes through it; models, provider credentials, teams and virtual keys live in its own database. | `adk-be-app` (Services and AI Foundry), `ai-foundry-be` (admin API, with the master key) |
 | `temporal-*` | The Temporal cluster that runs AI Foundry's **Agentic Workflows**, plus its Web UI at `/workflow-manager`. | `ai-foundry-workflows` (in-cluster, port `7233`) |
-| `docling-service` | Document conversion for chat attachments, at `/api/docling/`. | AI Foundry's edge |
+| `docling-service` | Document conversion for chat attachments, at `/api/docling/`. | The edges of Services and AI Foundry |
 | `memory-service` | Agent memory, at `/api/memories` and the MCP endpoint `/memory/mcp`. | `adk-be-app`, `ai-foundry-bff`, MCP clients |
 
-Install it **before AI Foundry**: AI Foundry's workflows worker connects to
-Temporal at startup, and its agents cannot reach a model without the AI
-gateway.
+Install it **right after [Keycloak Realms](40-keycloak-realms.md)**, before
+Services and AI Foundry: both are configured against its URL (AI gateway,
+Docling, the `ai-services-api` token-exchange audience), Services' seed
+hooks register its service accounts, and AI Foundry's workflows worker
+connects to Temporal at startup.
+
+AI Services itself calls Services at runtime (`authzUrl`), so its
+token-gated routes (Docling, memory) refuse requests until Services is
+installed. Check those routes once Services is up, not right after this
+step.
 
 ## Install
 
@@ -50,7 +58,7 @@ helm upgrade --install ai-services charts/ai-services \
 >
 > AI Foundry's own all-in-one overlay then points its Temporal address at
 > `ais-temporal-frontend.default.svc.cluster.local:7233`. In the local `kind`
-> setup that's `make 045_ai_services_all_in_one`; see
+> setup that's `make 025_ai_services_all_in_one`; see
 > [Installation layouts](10-overview.md#installation-layouts).
 
 ## `values.yaml` reference
@@ -61,7 +69,7 @@ All configuration lives under the `ai-services` key.
 |---|---|---|
 | `url` | Yes | Public URL of AI Services. AI Foundry points at it (`/ai-gateway/`, `/api/docling/`, memory). |
 | `authorizationServer.issuer` | Yes | Keycloak realm issuer URL. |
-| `authzUrl` | Yes | Services (homepage) URL: `access-control` resolves the caller's tenant context against it. |
+| `authzUrl` | Yes | Services (homepage) URL: `access-control` resolves the caller's tenant context against it. Called at runtime only, so Services doesn't have to exist yet when you install AI Services. |
 | `apiGateway.authorizationServer.audiences` | Yes | Keep `["ai-services-api"]`. Empty would let *any* token of the realm through, bypassing the permission checks made by AI Foundry's own gateway. |
 | `ingressRoute.enabled` | Yes (if using Traefik) | Disable and configure your own ingress otherwise. |
 | `secrets.*.enabled` | Yes | Same convention as the other products — see [Secrets](#secrets). |

@@ -259,6 +259,15 @@ Console install to v15.0.0 — they don't apply to a fresh install.
   AI gateway: add one (and its provider credential) from the AI Foundry UI.
   If the model pages themselves fail, check that AI Foundry's
   `litellmAdminKey` equals AI Services' LiteLLM `masterKey`.
+- **The Services install times out on the `seedServiceAccounts` Job.** The
+  Job retries for `readyTimeoutSeconds` (300 s) while it waits for the
+  `authz-registrar` key at `<services url>/.well-known/jwks.json`, a token
+  from Keycloak and the `rbac-management` migrations. Its log names the step
+  it is stuck on. A refused token usually means the realm was not
+  re-imported for 15.2. An account whose product URL is empty in
+  `hooks.seedServiceAccounts.products` is registered only if its client
+  already exists, so check that AI Services' URL is set there and that AI
+  Services was installed first.
 - **The Temporal UI loops back to the login, or Keycloak reports
   `unauthorized_client`.** The `ai-services-temporal-ui` client secret on
   the two sides differs — see [Shared secrets](#shared-secrets-must-match-across-products).

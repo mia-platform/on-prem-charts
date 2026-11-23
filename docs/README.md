@@ -10,9 +10,9 @@ the configuration reference.
 2. [Prerequisites](20-prerequisites.md) — cluster, ingress, DNS, datastores
 3. [Keycloak](30-keycloak.md)
 4. [Keycloak Realms](40-keycloak-realms.md)
-5. [Services (Home + Authorization)](50-services.md)
-6. [Catalog](60-catalog.md)
-7. [AI Services](65-ai-services.md)
+5. [AI Services](45-ai-services.md)
+6. [Services (Home + Authorization)](50-services.md)
+7. [Catalog](60-catalog.md)
 8. [AI Foundry](70-ai-foundry.md)
 9. [Console](80-console.md)
 10. [Troubleshooting](90-troubleshooting.md)
@@ -20,8 +20,11 @@ the configuration reference.
 ## How to read this
 
 Install the products in the order listed above — later products depend on
-the ones before them (Keycloak Realms needs a running Keycloak, Console
-needs Services for authorization, and so on). Each product page documents:
+the ones before them (Keycloak Realms needs a running Keycloak, Services
+needs AI Services, and so on). Console is the exception: it needs only
+Keycloak and its realms, so it can go in at any point after them — see
+[Dependency order](10-overview.md#dependency-order). Each product page
+documents:
 
 - What the product is and what it depends on
 - The Helm chart location and how to install/upgrade it

@@ -1,2 +1,8 @@
 services:
   namespacePrefix: svc
+  # AI Services' collector is `ais-otel-collector` in `default` in this layout.
+  telemetry:
+    otelExporterOtlpEndpoint: "http://ais-otel-collector.default.svc.cluster.local:4317"
+  adkBeApp:
+    config:
+      otelExporterOtlpEndpoint: "http://ais-otel-collector.default.svc.cluster.local:4318"

@@ -4,9 +4,30 @@ services:
 
   hooks:
     postgresConnectivityCheck:
-      enabled: false
+      enabled: true
     issuerConnectivityCheck:
-      enabled: false
+      enabled: true
+    seedAuthzResources:
+      enabled: true
+    seedBuiltinGroups:
+      enabled: true
+    seedSystemRoles:
+      enabled: true
+    seedServiceAccounts:
+      enabled: true
+      products:
+        ai-foundry:
+          url: "https://ai-foundry.mia-platform.test"
+        ai-services:
+          url: "https://ai-services.mia-platform.test"
+        authz:
+          url: "https://home.mia-platform.test"
+        catalog:
+          url: "https://catalog.mia-platform.test"
+        console:
+          url: "https://console.mia-platform.test"
+        flow:
+          url: "https://flow.mia-platform.test"
     seedData:
       enabled: true
       configurations:
@@ -21,11 +42,26 @@ services:
               enabled: true
               title: AI Foundry
               websiteBaseUrl: "https://ai-foundry.mia-platform.test/website/"
+              mcpServers:
+                - name: ai-foundry-demo
+                  title: AI Foundry
+                  url: https://ai-foundry.mia-platform.test/foundry/mcp
+                - name: memory-demo
+                  title: Memory
+                  url: https://ai-services.mia-platform.test/memory/mcp
+                - name: mcp-gateway-demo
+                  title: MCP Gateway
+                  url: https://ai-services.mia-platform.test/ai-gateway/mcp/
+                  auth: virtual-key
             catalog:
               enabled: true
               title: Catalog
               websiteBaseUrl: "https://catalog.mia-platform.test/website/"
               apiPortalBaseUrl: "https://catalog.mia-platform.test/documentations/api-portal"
+              mcpServers:
+                - name: catalog-mcp-demo
+                  title: Catalog MCP
+                  url: https://catalog.mia-platform.test/mcp
             authz:
               enabled: true
               title: Authorization
@@ -34,14 +70,23 @@ services:
               title: Homepage
               websiteBaseUrl: "https://home.mia-platform.test"
               apiPortalBaseUrl: "https://home.mia-platform.test/documentations/api-portal"
+              mcpServers:
+                - name: services-mcp-demo
+                  title: Services MCP
+                  url: https://home.mia-platform.test/mcp
 
+  # Exports OTLP to the collector of AI Services (charts/ai-services,
+  # `otelCollector`), which forwards traces to Langfuse and metrics to
+  # Prometheus. adk-be-app overrides the endpoint below (OTLP/HTTP).
   telemetry:
-    enabled: false
-    otelExporterOtlpEndpoint: "http://opentelemetry-collector.tracing-system.svc.cluster.local:4317"
+    enabled: true
+    otelExporterOtlpEndpoint: "http://otel-collector.ai-services.svc.cluster.local:4317"
+    otelExporterOtlpProtocol: "grpc"
 
   ingressRoute:
     enabled: true
 
+  aiServicesClientId: 'ai-services-api'
   authorizationServer:
     issuer: "https://auth.mia-platform.test/realms/mia-realm"
 
@@ -55,13 +100,20 @@ services:
 
   adkBeApp:
     config:
-      aiGatewayEnabled: false
+      aiGatewayEnabled: true
       catalogApiUrl: "https://catalog.mia-platform.test"
+      # The agent runtime exports over OTLP/HTTP, to the same collector.
+      otelExporterOtlpEndpoint: "http://otel-collector.ai-services.svc.cluster.local:4318"
+      otelExporterOtlpProtocol: "http/protobuf"
+      litellmProxyApiBase: "https://ai-services.mia-platform.test/ai-gateway/"
+      secretStoreBaseUrl: "https://ai-services.mia-platform.test"
 
   apiGateway:
     extraVirtualHosts:
       - "home.mia-platform.test:443"
       - "*"
+    docling:
+      url: "https://ai-services.mia-platform.test/api/docling/"
 
   swaggerAggregator:
     enabled: true

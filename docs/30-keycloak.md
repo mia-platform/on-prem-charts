@@ -205,7 +205,7 @@ values-driven render step) before install:
   `ai-services-temporal-ui` client the realm creates for the AI Services
   Temporal UI. The same value must be given to AI Services as
   `secrets.temporalUiKeys.authClientSecret` (see
-  [AI Services](65-ai-services.md#secrets)). Unlike the identity-provider
+  [AI Services](45-ai-services.md#secrets)). Unlike the identity-provider
   entries above, it is rendered without surrounding quotes, so the two sides
   hold exactly the same string.
 

@@ -1,10 +1,15 @@
 # Services (Home + Authorization)
 
-Chart: `charts/services` · Depends on: Keycloak Realms, PostgreSQL (`authz`, `adk`)
+Chart: `charts/services` · Depends on: Keycloak Realms, AI Services, PostgreSQL (`authz`, `adk`)
 
 This chart installs the platform homepage and the authorization (RBAC)
-service that other products (Catalog, AI Foundry, Console) call to check
-permissions.
+service that other products (AI Services, Catalog, AI Foundry) call to
+check permissions.
+
+Install [AI Services](45-ai-services.md) first: the homepage agent sends
+its model calls through AI Services' AI gateway, chat attachments are
+converted by its Docling, and the seed hooks register the AI Services
+service accounts.
 
 ## Install
 
@@ -44,16 +49,24 @@ All configuration lives under the `services` key.
 | `url` | Yes | Public URL for the homepage. |
 | `authorizationServer.issuer` | Yes | The Keycloak realm issuer URL products authenticate against (`https://<keycloak-host>/realms/<realm>`). |
 | `ingressRoute.enabled` | Yes (if using Traefik) | Disable and configure your own ingress otherwise. |
+| `aiServicesClientId` | Yes | Audience of the token exchange towards AI Services (`ai-services-api`, the client the realm creates with the `aiServices` product). Used by `adk-be-app` to read the tenant's gateway key from the secret store. |
 | `hooks.seedData.configurations.default.products` | Yes | The product tiles/URLs shown on the homepage — one entry per product you're installing, with its public URL. |
-| `hooks.postgresConnectivityCheck.enabled` / `issuerConnectivityCheck.enabled` | No | Pre-flight checks; enable once your Postgres/Keycloak are reachable. |
+| `hooks.seedData.configurations.default.products.<product>.mcpServers` | No | MCP servers listed for that product (`name`, `title`, `url`, optional `auth: virtual-key` for servers reached with the tenant's AI gateway key). This repository registers the AI Foundry, memory and MCP gateway servers (AI Services), the Catalog MCP server and the Services MCP server. |
+| `hooks.seedAuthzResources.enabled` / `seedSystemRoles.enabled` / `seedBuiltinGroups.enabled` | Yes | Seed the authorization resources, the tenant-independent system roles, and the built-in groups (with their role assignments, never members) of every tenant. `true` in this repository. They retry until the `rbac-management` migrations are applied. |
+| `hooks.seedServiceAccounts.enabled` | Yes | Registers the system service accounts in Keycloak (as OIDC clients) and in the `authz` database. Runs last, as the `authz-registrar` client, reading its credential from the `rbac-management-keys` Secret. Clients that already exist are left untouched. |
+| `hooks.seedServiceAccounts.products.<product>.url` | Yes | Public URL of each product a service account belongs to (`ai-foundry`, `ai-services`, `authz`, `catalog`, `console`, `flow`). The client's JWKS endpoint is derived as `<url>/.well-known/jwks.json`. A product left empty derives nothing, so its accounts are registered only if their client already exists in Keycloak. |
+| `hooks.postgresConnectivityCheck.enabled` / `issuerConnectivityCheck.enabled` | No | Pre-flight checks that Postgres and the Keycloak issuer are reachable before the release goes on. `true` in this repository. |
 | `secrets.adkBeAppKeys.enabled` / `authtoolBffKeys.enabled` / `rbacManagementKeys.enabled` | Yes | Toggles that gate the Secrets below. Set to `true` to have the chart render the Secret from these `values.yaml` fields, or `false` to reuse a Secret you manage outside the chart — see [Bringing your own Secret](#bringing-your-own-secret). |
-| `telemetry.enabled` / `otelExporterOtlpEndpoint` | No | OpenTelemetry export, disable if you don't run a collector. |
+| `telemetry.enabled` / `otelExporterOtlpEndpoint` / `otelExporterOtlpProtocol` | No | OpenTelemetry export of every component (`api-gateway`, `access-control`, `authtool-bff`, `rbac-management`, `adk-be-app`). On here, to AI Services' collector (`otel-collector.ai-services`, gRPC `4317`; `ais-otel-collector.default` in the all-in-one layout), which forwards traces to Langfuse and metrics to Prometheus. Set `enabled: false` if you run AI Services without observability. |
 | `apiGateway.extraVirtualHosts` | Yes | Hostnames the internal API gateway should route for — must include your homepage hostname. |
+| `apiGateway.docling.url` | Yes | AI Services' Docling route, `<ai-services url>/api/docling/`, used for chat attachments. Empty disables the route. |
 | `adkBeApp.config.catalogApiUrl` | Yes | Public URL of the [Catalog](60-catalog.md) instance the homepage agent talks to. |
-| `homepageWebsite.image.tag` | No | Pins the homepage frontend image (`0.7.0` in this repository). |
-| `adkBeApp.config.aiGatewayEnabled` | No | Route the homepage agent's LLM calls through the AI Gateway. `false` in this repository. |
+| `adkBeApp.config.aiGatewayEnabled` | Yes | Route the homepage agent's model calls through AI Services' AI gateway. `true` in this repository (and the chart default). |
+| `adkBeApp.config.litellmProxyApiBase` | Yes (with the gateway on) | The AI gateway: `<ai-services url>/ai-gateway/`. |
+| `adkBeApp.config.secretStoreBaseUrl` | Yes (with the gateway on) | AI Services URL. The agent reads the tenant's AI gateway key from the secret store there, with the caller's token exchanged for `aiServicesClientId`. The key is minted by AI Foundry, so the homepage agent can call a model only once AI Foundry has created it for the tenant. |
+| `adkBeApp.config.otelExporterOtlpEndpoint` / `otelExporterOtlpProtocol` | No | Overrides the endpoint above for the agent runtime, which exports over OTLP/HTTP: the same collector on port `4318`, `http/protobuf`. Read only while `telemetry.enabled` is `true`. |
 
-To have more details on the values you can update, please refer to the [JSON Schema of the Services chart](https://cdn.mia-platform.eu/runtime/platform/services/services-helm-chart/0.5.0-beta.3/values.schema.json).
+To have more details on the values you can update, please refer to the [JSON Schema of the Services chart](https://cdn.mia-platform.eu/runtime/platform/services/services-helm-chart/0.5.0/values.schema.json).
 
 ## Secrets
 
@@ -68,7 +81,9 @@ This chart expects a Secret (this repository generates it via
   material for token/cookie encryption between products (shared across
   Catalog, Services, and AI Foundry — must be the same value in all three).
 - **`rbacManagementKeys`** — `postgresConnectionString` for the `authz`
-  Postgres database, and `privateKey`.
+  Postgres database, and `privateKey`. The `seedServiceAccounts` hook reads
+  both from the same Secret (`hooks.seedServiceAccounts.secretName` to use
+  another one).
 
 Generate your own values for these in your own secret-management approach
 rather than reusing this repository's `.local/` dev key material — but keep
