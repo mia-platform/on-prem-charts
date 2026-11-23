@@ -2,7 +2,8 @@
 # The `traefik-tls` secret (created by hacks/tls.sh in the traefik
 # namespace before install) is used as the default certificate.
 #
-# Schema targets the Traefik Helm chart v41.x (Traefik v3).
+# Schema targets the Traefik Helm chart v42.x (Traefik v3), pinned in
+# hacks/traefik.sh (TRAEFIK_CHART_VERSION).
 
 ports:
   # Plain HTTP (node port 8000 -> host 80): redirect everything to the
@@ -27,7 +28,8 @@ tlsStore:
       secretName: traefik-tls
 
 service:
-  type: ClusterIP
+  spec:
+    type: ClusterIP
 
 nodeSelector:
   node-role.kubernetes.io/control-plane: ""
