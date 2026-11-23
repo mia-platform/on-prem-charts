@@ -15,7 +15,8 @@ imagePullSecrets:
   - name: my-mia-platform-repository
 
 bootstrapSuperadmin:
-  enabled: false
+  enabled: true
+  firstLoginEmail: 'umberto.toniolo@mia-platform.eu'
 
 mia-console:
   configurations:

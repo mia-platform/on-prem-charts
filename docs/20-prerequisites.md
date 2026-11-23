@@ -159,19 +159,25 @@ side, regardless of how you provision the cluster.
 AI Foundry's `secret-store-service` keeps the credentials AI Foundry manages
 (API credentials entered in the UI, each tenant's AI gateway key) in an
 [OpenBao](https://openbao.org/) or HashiCorp Vault instance reachable from
-the cluster. AI Foundry does not bundle one. It needs:
+the cluster. Catalog has a `secret-store-service` of its own, optional
+(`catalog.secretStoreService.enabled`), that keeps the signing keys of
+webhooks: without it, webhooks with a signing secret can't be created or
+rotated. Neither chart bundles a store. Each needs:
 
-- A **KV v2** secrets engine mount (`kv` by default —
-  `ai-foundry.secretStoreService.config.storeKvMount`).
+- A **KV v2** secrets engine mount (`secretStoreService.config.storeKvMount`:
+  `kv` in this repository's AI Foundry values, `secret` in Catalog's). On a
+  store with namespaces, Catalog also sends `config.storeNamespace` as
+  `X-Vault-Namespace`.
 - A way to sign in, either:
-  - **AppRole** (`config.auth.method: approle`, the default here): a role
+  - **AppRole** (`config.auth.method: approle`, AI Foundry's setting here): a role
     whose policy allows `create`/`read`/`update`/`patch`/`delete` on
     `<mount>/data/*` and `read`/`list`/`delete` on `<mount>/metadata/*`.
     Its `role_id`/`secret_id` go into
     `secrets.secretStoreServiceKeys.storeRoleId`/`storeSecretId`.
-  - **Kubernetes JWT** (`config.auth.method: jwt`): a JWT auth mount that
-    trusts the cluster's ServiceAccount tokens, and a role bound to the
-    `secret-store-service` ServiceAccount of AI Foundry's namespace
+  - **Kubernetes JWT** (`config.auth.method: jwt`, the Catalog chart's
+    default and its setting here): a JWT auth mount that trusts the
+    cluster's ServiceAccount tokens, and a role bound to the
+    `secret-store-service` ServiceAccount of the product's namespace
     (`config.auth.jwt.mount`/`role`). No secret is needed in that case.
 
 ### Script `hacks/openbao.sh`

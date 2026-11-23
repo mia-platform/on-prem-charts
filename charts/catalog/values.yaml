@@ -60,9 +60,6 @@ catalog:
       litellmProxyApiBase: "https://ai-services.mia-platform.test/ai-gateway/"
       secretStoreBaseUrl: "https://ai-services.mia-platform.test"
 
-  doclingService:
-    enabled: true
-
   itemsCompressor:
     config:
       kafkaConsumerConfig:

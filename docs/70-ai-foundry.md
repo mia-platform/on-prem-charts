@@ -186,7 +186,7 @@ exact key names it expects.
   cross-links to Console/Catalog/homepage resolve correctly.
 - Sign in with the username/password of the user you created in the
   `mia-realm` realm (or the realm name you chose) (see
-  [Keycloak Realms: create a super-admin user](40-keycloak-realms.md#post-install-create-a-super-admin-user)).
+  [Keycloak Realms: bootstrap the first super-admin](40-keycloak-realms.md#post-install-bootstrap-the-first-super-admin)).
   Alternatively, the **Register** button on the login page lets anyone
   create a new user on the spot — those self-registered users only get
   regular (non-admin) permissions.

@@ -26,6 +26,7 @@ flowchart TD
     B --> G[AI Services]
     G --> C[Services]
     C --> D[Catalog]
+    G --> D
     D --> E[AI Foundry]
     G --> E
     B --> F[Console]
@@ -41,6 +42,9 @@ flowchart TD
 - AI Services calls Services back at runtime (`authzUrl`, to resolve the
   caller's tenant context), so its token-gated routes answer only once
   Services is up. This doesn't affect the install order.
+- **Catalog** depends on Services and AI Services: its agent calls the AI
+  gateway and the secret store, and its API gateway routes chat attachments
+  to Docling.
 - **AI Foundry** depends on Catalog, Services and AI Services.
 - **Console** depends directly on Keycloak Realms and does not require AI
   Services, Services, Catalog, or AI Foundry to be installed first.

@@ -8,6 +8,10 @@ set -euo pipefail
 # Environment:
 #   POSTGRES_NAMESPACE  postgres namespace (default: postgres)
 #   POSTGRES_PASSWORD   postgres password (default: postgres)
+#   POSTGRES_CPU_REQUEST     CPU request (default: 500m)
+#   POSTGRES_MEMORY_REQUEST  memory request (default: 1Gi)
+#   POSTGRES_CPU_LIMIT       CPU limit (default: 2)
+#   POSTGRES_MEMORY_LIMIT    memory limit (default: 2Gi)
 #   KUBECONFIG          location of kubectl config file
 ###############################################################################
 
@@ -39,6 +43,10 @@ log_error() {
 
 POSTGRES_NAMESPACE=${POSTGRES_NAMESPACE:=postgres}
 POSTGRES_PASSWORD=${POSTGRES_PASSWORD:=postgres}
+POSTGRES_CPU_REQUEST=${POSTGRES_CPU_REQUEST:=500m}
+POSTGRES_MEMORY_REQUEST=${POSTGRES_MEMORY_REQUEST:=1Gi}
+POSTGRES_CPU_LIMIT=${POSTGRES_CPU_LIMIT:=2}
+POSTGRES_MEMORY_LIMIT=${POSTGRES_MEMORY_LIMIT:=2Gi}
 
 ###############################################################################
 # Preflight — check required binaries
@@ -74,6 +82,10 @@ helm upgrade --install postgres bitnami/postgresql \
     --namespace "${POSTGRES_NAMESPACE}" --create-namespace \
     --set auth.postgresPassword="${POSTGRES_PASSWORD}" \
     --set primary.persistence.enabled=false \
+    --set primary.resources.requests.cpu="${POSTGRES_CPU_REQUEST}" \
+    --set primary.resources.requests.memory="${POSTGRES_MEMORY_REQUEST}" \
+    --set primary.resources.limits.cpu="${POSTGRES_CPU_LIMIT}" \
+    --set primary.resources.limits.memory="${POSTGRES_MEMORY_LIMIT}" \
     --wait
 
 log_info "Waiting for PostgreSQL..."

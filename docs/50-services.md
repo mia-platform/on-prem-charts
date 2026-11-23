@@ -66,7 +66,7 @@ All configuration lives under the `services` key.
 | `adkBeApp.config.secretStoreBaseUrl` | Yes (with the gateway on) | AI Services URL. The agent reads the tenant's AI gateway key from the secret store there, with the caller's token exchanged for `aiServicesClientId`. The key is minted by AI Foundry, so the homepage agent can call a model only once AI Foundry has created it for the tenant. |
 | `adkBeApp.config.otelExporterOtlpEndpoint` / `otelExporterOtlpProtocol` | No | Overrides the endpoint above for the agent runtime, which exports over OTLP/HTTP: the same collector on port `4318`, `http/protobuf`. Read only while `telemetry.enabled` is `true`. |
 
-To have more details on the values you can update, please refer to the [JSON Schema of the Services chart](https://cdn.mia-platform.eu/runtime/platform/services/services-helm-chart/0.5.0/values.schema.json).
+To have more details on the values you can update, please refer to the [JSON Schema of the Services chart](https://cdn.mia-platform.eu/runtime/platform/services/services-helm-chart/0.5.1/values.schema.json).
 
 ## Secrets
 
@@ -124,7 +124,7 @@ matching the fields each chart-rendered Secret would otherwise hold:
   the product tiles configured in `hooks.seedData`.
 - Sign in with the username/password of the user you created in the
   `mia-realm` realm (or the realm name you chose) (see
-  [Keycloak Realms: create a super-admin user](40-keycloak-realms.md#post-install-create-a-super-admin-user)).
+  [Keycloak Realms: bootstrap the first super-admin](40-keycloak-realms.md#post-install-bootstrap-the-first-super-admin)).
   Alternatively, the **Register** button on the login page lets anyone
   create a new user on the spot — those self-registered users only get
   regular (non-admin) permissions.

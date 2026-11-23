@@ -9,11 +9,11 @@ repository's charts.
 > (`charts/ai-services`) with no v15.1.0 counterpart, so an upgrade has to
 > **install** it, after Keycloak Realms and before Home. Home 15.2 sends the
 > homepage agent's model calls through its AI gateway, converts chat
-> attachments with its Docling and seeds its service accounts. AI Foundry
-> 15.2 also runs its workflows on its Temporal. Plan for its prerequisites
-> before you start: the `litellm`, `temporal`, `temporal_visibility` and
-> `memory` PostgreSQL databases (`memory` with `pgvector`), and, if you keep
-> observability on, a Langfuse project. See [AI Services](#ai-services-new).
+> attachments with its Docling and seeds its service accounts. Catalog 15.2
+> uses the same AI gateway and Docling, and AI Foundry 15.2 also runs its
+> workflows on its Temporal. Provision the
+> [new prerequisites](#new-prerequisites) before you start. See
+> [AI Services](#ai-services-new).
 
 ### Scope of the migration
 
@@ -23,15 +23,30 @@ v15.2.0 updates these charts:
 - Keycloak Realms (`charts/keycloak-realms`)
 - **AI Services (`charts/ai-services`), new and mandatory**
 - Home (`charts/services`)
+- Catalog (`charts/catalog`)
 - AI Foundry (`charts/ai-foundry`)
 - Console (`charts/console`)
 
-Catalog is unchanged; keep it on v15.1.0.
+### New prerequisites
+
+v15.2.0 needs infrastructure that v15.1.0 didn't. Have it ready before
+upgrading anything; details are in [Prerequisites](docs/20-prerequisites.md).
+
+| Prerequisite | Needed by | Details |
+|---|---|---|
+| Hostname `ai-services.<your-domain>` | AI Services | DNS record and TLS certificate on your ingress, like the other products. Also `langfuse.<your-domain>` if you expose the Langfuse UI. |
+| PostgreSQL databases `litellm`, `temporal`, `temporal_visibility`, `memory` | AI Services | One owner user each (`litellm_user`, `temporal_user` for both Temporal databases, `memory_user`). `memory` needs the `vector` extension ([pgvector](https://github.com/pgvector/pgvector)), created once by a superuser: `memory-service` does not create it. See [Prerequisites: PostgreSQL](docs/20-prerequisites.md#postgresql) and `hacks/postgres/*.sql`. |
+| PostgreSQL database `workspace` | AI Foundry (`workspace-service`) | Owner user `workspace_user`, plain `postgresql://` URL. |
+| OpenBao or HashiCorp Vault, with a KV v2 mount | AI Foundry (**required**), Catalog (optional) | Not bundled by any chart. AI Foundry's `secret-store-service` keeps API credentials and the tenants' AI gateway keys there; Catalog's keeps webhook signing keys. Each signs in with an AppRole or with its pod's ServiceAccount through a JWT auth mount. See [Prerequisites: OpenBao or Vault](docs/20-prerequisites.md#openbao-or-vault). |
+| Langfuse `>= 4.24.0`, with a project and its API key pair | AI Services, AI Foundry (optional: observability) | Installed with its official Helm chart, which with its bundled ClickHouse needs **cert-manager** and the **ClickHouse operator** in the cluster. Without it, turn observability off as described in [Prerequisites: Langfuse](docs/20-prerequisites.md#langfuse-observability). |
+| New Keycloak vault keys `mia-realm_scim-client-secret`, `mia-realm_ai-services-temporal-ui-client-secret` | Keycloak Realms | Added to `keycloak-vault-secrets` before the realms are re-imported. See [Keycloak](#keycloak). |
+| IdP access token as a JWT with a groups claim | Keycloak (optional) | Only to federate your IdP with the new `mia-platform-oidc` provider, so its groups drive authorization in Home. See [Identity provider with group provisioning](docs/40-keycloak-realms.md#identity-provider-with-group-provisioning-mia-platform-oidc). |
 
 ### Order of operations
 
 Upgrade in the same order as a fresh install: Keycloak, then Keycloak
-Realms, then **install** AI Services, then Home, then AI Foundry. Console
+Realms, then **install** AI Services, then Home, then Catalog, then AI
+Foundry. Console
 depends only on Keycloak and its realms, so it can be upgraded at any point
 after them. For each Helm chart, run `helm dependency build charts/<chart>`
 before `helm upgrade` so the new dependency version is pulled.
@@ -98,7 +113,7 @@ Before installing it:
 
 - Create its PostgreSQL databases: `litellm`, `temporal`,
   `temporal_visibility` and `memory` (`memory` needs the `vector`
-  extension). See [Prerequisites: PostgreSQL](docs/20-prerequisites.md#postgresql).
+  extension). See [New prerequisites](#new-prerequisites).
 - Make sure the realms were re-imported with the `aiServices` product and
   the `ai-services-temporal-ui` vault key (see the two sections above).
 - Choose the LiteLLM master key (`litellmProxyKeys.masterKey`). AI Foundry
@@ -128,7 +143,7 @@ upgraded too.
 
 | Change | Details |
 |---|---|
-| `services` dependency | `0.3.16` → `0.5.0` (the `values.schema.json` `$ref` is updated to match) |
+| `services` dependency | `0.3.16` → `0.5.1` (the `values.schema.json` `$ref` is updated to match) |
 | Added `services.aiServicesClientId` | `ai-services-api`: audience of the token exchange towards AI Services. |
 | Added `services.adkBeApp.config.catalogApiUrl` | Public URL of your Catalog instance (e.g. `https://catalog.<your-domain>`). |
 | Added `services.adkBeApp.config.aiGatewayEnabled` | `true`: the homepage agent's model calls go through AI Services' AI gateway. |
@@ -213,13 +228,77 @@ The homepage agent reads the tenant's AI gateway key minted by AI Foundry,
 so it can call a model only after AI Foundry 15.2 is upgraded and a model is
 registered.
 
+### Catalog
+
+| Change | Details |
+|---|---|
+| `catalog` dependency | `0.3.42-0` → `0.5.3-2` (the `values.schema.json` `$ref` is updated to match) |
+| Added `catalog.aiServicesClientId` | `ai-services-api`: audience of the token exchange towards AI Services. |
+| Added `catalog.adkBeApp.config.litellmProxyApiBase` | `https://ai-services.<your-domain>/ai-gateway/`: the Catalog agent's model calls go through AI Services' AI gateway. |
+| Added `catalog.adkBeApp.config.secretStoreBaseUrl` | `https://ai-services.<your-domain>`. The agent reads the tenant's AI gateway key there. |
+| Added `catalog.apiGateway.docling.url` | `https://ai-services.<your-domain>/api/docling/`: chat attachments are converted by AI Services. |
+| Removed `catalog.doclingService` | Catalog no longer deploys its own Docling; delete it from your values. |
+| Removed `catalog.adkBeApp.config.googleCloudProject` / `googleCloudLocation` / `googleGenaiUseVertexai` | Models and provider credentials are registered on the AI gateway from the AI Foundry UI. Leave `secrets.adkBeAppKeys.googleApplicationCredentials` empty. |
+| Added `catalog.secretStoreService` | Optional, off in the chart. Keeps the signing keys of webhooks in an OpenBao/Vault KV v2 mount, signing in with the pod's ServiceAccount (`auth.method: jwt`, needs `auth.jwt.mount`/`role`) or an AppRole (`approle`, with `secrets.secretStoreServiceKeys`). Off, webhooks with a signing secret can't be created or rotated (`502`). Enabled in this repository's values. |
+
+See [Catalog](docs/60-catalog.md#valuesyaml-reference) for every field.
+
+```yaml
+catalog:
+  aiServicesClientId: "ai-services-api"
+
+  apiGateway:
+    docling:
+      url: "https://ai-services.<your-domain>/api/docling/"
+
+  adkBeApp:
+    config:
+      litellmProxyApiBase: "https://ai-services.<your-domain>/ai-gateway/"
+      secretStoreBaseUrl: "https://ai-services.<your-domain>"
+      # remove:
+      # googleCloudProject: "..."
+      # googleCloudLocation: "..."
+      # googleGenaiUseVertexai: true
+
+  # optional, for webhooks with a signing secret:
+  secretStoreService:
+    enabled: true
+    config:
+      storeAddr: "<your-openbao-or-vault-url>"
+      storeKvMount: "<kv-v2-mount>"
+      storeNamespace: ""            # X-Vault-Namespace, empty if unused
+      auth:
+        method: "jwt"
+        jwt:
+          mount: "<jwt-auth-mount>"
+          role: "<role-bound-to-catalog-secret-store-service>"
+
+  # remove:
+  # doclingService:
+  #   enabled: true
+```
+
+```sh
+helm dependency build charts/catalog
+helm upgrade --install catalog charts/catalog \
+  --namespace <catalog-namespace> \
+  -f charts/catalog/values.yaml \
+  -f <your-secrets-values-file> \
+  --rollback-on-failure --timeout 10m
+```
+
+Upgrade Catalog before AI Foundry: AI Foundry 15.2's provisioner writes into
+Catalog as the `ai-foundry-provisioner` service account, which only Catalog
+15.2's policies recognise. Like the homepage agent, the Catalog agent can
+call a model only after AI Foundry has minted the tenant's AI gateway key.
+
 ### AI Foundry
 
 | Change | Details |
 |---|---|
 | `ai-foundry` dependency | `0.4.83-0` → `0.5.0` |
 | New components | `ai-foundry-be`, `ai-foundry-provisioner`, `ai-foundry-workflows`, `workspace-service`, `secret-store-service`, each with its own Secret. Docling moved to AI Services. |
-| New prerequisites | AI Services, an OpenBao/Vault KV v2 store, the `workspace` database. |
+| New prerequisites | AI Services, Catalog 15.2, an OpenBao/Vault KV v2 store, the `workspace` database. |
 
 The full list of values to add, change and remove (AI gateway, Temporal,
 OpenBao, telemetry, the removed Vertex AI settings) is in

@@ -262,16 +262,33 @@ group mapper). They work the same with `mia-platform-oidc`.
   client secret that matches what you used to authenticate the
   products/extensibility import.
 
-## Post-install: create a super-admin user
+## Post-install: bootstrap the first super-admin
 
-The `products` realm is imported under the realm name **`mia-realm`**
-(not literally "products" — see `products/010-realm-settings.yaml`). This
-name is a prototype value in this repository's example configuration — set
-it to whatever realm name your installation actually uses, not a fixed
-identifier. In that realm, create a new user with a username and password of your choice,
-then add it to the **`products/authz/superadmin`** group. That group maps
-the `authz-api` client role `urn:mia-platform-internal:role:authz:superadmin`,
-which is what grants full administrative access across the products (Home,
-Catalog, AI Foundry, Console) once you start using them — use this account
-rather than the Keycloak admin account for day-to-day platform
-administration.
+A fresh installation has no platform administrator. Bootstrap the first one
+as follows:
+
+1. **Grant yourself super-admin in Keycloak.** The `products` realm is
+   imported under the realm name **`mia-realm`** (not literally "products" —
+   see `products/010-realm-settings.yaml`). This name is a prototype value
+   in this repository's example configuration — set it to whatever realm
+   name your installation actually uses, not a fixed identifier. In that
+   realm, create a new user with a username and password of your choice
+   (or reuse an existing one), then add it to the
+   **`products/authz/superadmin`** group. That group maps the `authz-api`
+   client role `urn:mia-platform-internal:role:authz:superadmin`, which
+   grants full administrative access across the products (Home, Catalog,
+   AI Foundry, Console) — use this account rather than the Keycloak admin
+   account for day-to-day platform administration.
+2. **Add yourself to the default tenant.** Sign in to Home with that user
+   and add it as a member of the default tenant. Only this first
+   super-admin has to do it by hand: every other user can then be added to
+   tenants from Home by an administrator.
+3. **(Optional) Grant super-admin inside the services.** In Home, go to
+   **Administration → System Roles** and assign the super-admin system role
+   to your user. This keeps the role in the authorization service itself,
+   independent of the Keycloak group.
+4. **(Optional) Remove the Keycloak super-admin role.** Once step 3 is done,
+   you can remove the user from the `products/authz/superadmin` group in
+   Keycloak. Skip this if you didn't do step 3: the Keycloak group would be
+   your only source of super-admin rights, and removing it would leave the
+   platform without an administrator.

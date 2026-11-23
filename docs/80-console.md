@@ -119,7 +119,7 @@ there after their first login.
 1. **Create the bootstrap user in Keycloak.** In the `mia-realm` realm (or
    the realm name you chose), create the user, or reuse the super-admin
    user from
-   [Keycloak Realms: create a super-admin user](40-keycloak-realms.md#post-install-create-a-super-admin-user).
+   [Keycloak Realms: bootstrap the first super-admin](40-keycloak-realms.md#post-install-bootstrap-the-first-super-admin).
    Add the user to the **`products/console/guest`** group. Without this
    group the user can't access Console, so step 3 can't create their
    `userinfo` record.
@@ -161,7 +161,7 @@ On every install/upgrade where the bootstrap is enabled, the hooks run:
 - Visit the Console URL and confirm you can sign in via Keycloak.
 - Sign in with the username/password of the user you created in the
   `mia-realm` realm (or the realm name you chose) (see
-  [Keycloak Realms: create a super-admin user](40-keycloak-realms.md#post-install-create-a-super-admin-user)).
+  [Keycloak Realms: bootstrap the first super-admin](40-keycloak-realms.md#post-install-bootstrap-the-first-super-admin)).
   The user must also be in the **`products/console/guest`** group to
   access Console. Membership in `products/authz/superadmin` alone isn't
   enough.
