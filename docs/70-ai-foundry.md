@@ -82,7 +82,7 @@ All configuration lives under the `ai-foundry` key.
 | `aiFoundryProvisioner.mcpServers.*` | Yes | URLs of the Catalog, Services and AI Services memory MCP servers registered as default items. |
 | `aiFoundryWorkflows.config.temporalAddress` | Yes | AI Services' Temporal frontend, in-cluster: `temporal-frontend.<ai-services namespace>.svc.cluster.local:7233`. |
 | `aiFoundryWorkflows.config.temporalNamespace` | Yes | A *Temporal* namespace (not a Kubernetes one) listed in AI Services' `temporal.namespaces`. |
-| `secretStoreService.config.storeAddr` / `storeKvMount` / `auth` | Yes | Address of your OpenBao/Vault, the KV v2 mount AI Foundry writes under, and how it signs in (`approle` with `secrets.secretStoreServiceKeys`, or `jwt` with the pod's ServiceAccount — see [Prerequisites](20-prerequisites.md#openbao-or-vault)). |
+| `secretStoreService.config.storeAddr` / `storeKvMount` / `auth` | Yes | Address of your OpenBao/Vault, the KV v2 mount AI Foundry writes under, and the JWT mount and role for the pod's ServiceAccount. See [Prerequisites](20-prerequisites.md#openbao-or-vault). |
 | `apiGateway.docling.url` | Yes | AI Services' Docling route: `<ai-services url>/api/docling/`. |
 | `workspaceService.config.*` | No | Runner images, flavours, node selector. `allowArbitraryCommands` (off) lets workflow steps run code from the cloned repository, and requires a dedicated node pool or a sandboxed runtime class. |
 | `aiFoundryWebsite.config.links` | No | Cross-links shown in the AI Foundry UI (Console, Catalog, homepage, and various documentation URLs) — point these at your own products' URLs. |
@@ -115,9 +115,6 @@ Generated in this repository via `charts/ai-foundry/render_values.sh`:
   account's own RSA key. Keep it distinct from the shared client key: that
   account is a platform superadmin, and Keycloak accepts an assertion signed
   with any key it publishes.
-- **`secretStoreServiceKeys`** — `storeRoleId` and `storeSecretId` of the
-  OpenBao/Vault AppRole (only with `secretStoreService.config.auth.method:
-  approle`).
 - **`workspaceServiceKeys.postgresConnectionString`** — a database of its
   own (`workspace`), `postgresql://…`.
 

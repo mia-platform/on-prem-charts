@@ -156,41 +156,41 @@ side, regardless of how you provision the cluster.
 
 ## OpenBao or Vault
 
-AI Foundry's `secret-store-service` keeps the credentials AI Foundry manages
-(API credentials entered in the UI, each tenant's AI gateway key) in an
-[OpenBao](https://openbao.org/) or HashiCorp Vault instance reachable from
-the cluster. Catalog has a `secret-store-service` of its own, optional
-(`catalog.secretStoreService.enabled`), that keeps the signing keys of
-webhooks: without it, webhooks with a signing secret can't be created or
-rotated. Neither chart bundles a store. Each needs:
+AI Foundry's `secret-store-service` keeps API credentials entered in the UI
+in an [OpenBao](https://openbao.org/) or HashiCorp Vault instance reachable
+from the cluster. AI Services stores the tenants' AI gateway keys there.
+Catalog's optional store (`catalog.secretStoreService.enabled`) keeps
+webhook signing keys. With the Catalog store disabled, creating or rotating
+webhooks with a signing secret fails. The charts use a separately provisioned
+OpenBao or Vault instance. Each store needs the following settings.
 
-- A **KV v2** secrets engine mount (`secretStoreService.config.storeKvMount`:
-  `kv` in this repository's AI Foundry values, `secret` in Catalog's). On a
-  store with namespaces, Catalog also sends `config.storeNamespace` as
-  `X-Vault-Namespace`.
-- A way to sign in, either:
-  - **AppRole** (`config.auth.method: approle`, AI Foundry's setting here): a role
-    whose policy allows `create`/`read`/`update`/`patch`/`delete` on
-    `<mount>/data/*` and `read`/`list`/`delete` on `<mount>/metadata/*`.
-    Its `role_id`/`secret_id` go into
-    `secrets.secretStoreServiceKeys.storeRoleId`/`storeSecretId`.
-  - **Kubernetes JWT** (`config.auth.method: jwt`, the Catalog chart's
-    default and its setting here): a JWT auth mount that trusts the
-    cluster's ServiceAccount tokens, and a role bound to the
-    `secret-store-service` ServiceAccount of the product's namespace
-    (`config.auth.jwt.mount`/`role`). No secret is needed in that case.
+- A **KV v2** secrets engine mount (`secretStoreService.config.storeKvMount`).
+  The default values use `secret` in a separate namespace for each product.
+  `config.storeNamespace` sets the `X-Vault-Namespace` header. With a store
+  that has no namespaces, leave it empty and use a separate mount and policy
+  per product. Set `config.storeAddr` to your store's HTTPS endpoint in production.
+- **Kubernetes JWT** (`config.auth.method: jwt`) uses an auth mount that
+  trusts the cluster's ServiceAccount tokens. Match `config.auth.jwt.audience`
+  to the role's bound audience and bind the role to the Kubernetes namespace
+  and ServiceAccount from the rendered Deployment. Scope the role's policy
+  to the product's KV paths. The `all-in-one` layout prefixes the
+  ServiceAccount names.
+
+Set `ai-foundry.aiServicesSecretStoreUrl` and the
+`adkBeApp.config.secretStoreBaseUrl` values in Catalog and Services to the
+same AI Services gateway URL. AI Foundry writes tenant gateway keys there,
+and Catalog and Services read them there. Migrate or re-create keys already
+stored in Foundry before switching the readers.
 
 ### Script `hacks/openbao.sh`
 
 For the local `kind` cluster, [`hacks/openbao.sh`](../hacks/openbao.sh)
 installs OpenBao with its official Helm chart **in dev mode** (in-memory,
-auto-unsealed, root token `root`) into the `openbao` namespace, enables the
-`kv` KV v2 mount and the AppRole method, creates the
-`ai-foundry-secret-store` role and writes its credentials to
-`.local/openbao-role-id` and `.local/openbao-secret-id`, which
-`charts/ai-foundry/render_values.sh` reads. Dev mode loses everything on a
-pod restart: re-run the script, then reinstall AI Foundry so it picks up
-the new AppRole. Do not use dev mode outside a throwaway cluster.
+auto-unsealed, root token `root`) into the `openbao` namespace. It provisions
+the KV v2 mounts and JWT roles from the AI Foundry, AI Services and Catalog
+values. The roles accept the products' ServiceAccount tokens in both local
+layouts. After a pod restart, run `make 11_init_openbao` to recreate the
+configuration. In-memory data is lost on restart.
 
 ## Langfuse (observability)
 

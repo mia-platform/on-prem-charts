@@ -53,6 +53,18 @@ ai-services:
   accessControl:
     enabled: true
 
+  secretStoreService:
+    enabled: true
+    config:
+      storeAddr: "http://openbao.openbao.svc.cluster.local:8200"
+      storeKvMount: "secret"
+      storeNamespace: "console/production/ai-services"
+      auth:
+        method: "jwt"
+        jwt:
+          mount: "jwt-console-cluster"
+          role: "ai-services-production"
+
   # AI gateway. Models and provider credentials are registered from AI Foundry
   # (stored in LiteLLM's own database), so no static model_list is needed here.
   litellmProxy:

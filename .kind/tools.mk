@@ -51,7 +51,7 @@ export KUBECONFIG := $(CURDIR)/.kind/config
 	@./hacks/redis.sh
 .PHONY: 10_init_redis
 
-11_init_openbao: ## Install OpenBao (dev mode) for AI Foundry's secret store
+11_init_openbao: ## Install OpenBao (dev mode) and configure product ServiceAccount JWT roles
 	@./hacks/openbao.sh
 .PHONY: 11_init_openbao
 

@@ -234,10 +234,9 @@ Console install to v15.0.0 — they don't apply to a fresh install.
   from Catalog means Catalog's policies don't know that service account:
   Catalog must be at 15.2 too.
 - **Every Connections / API credentials page answers `503`.**
-  `secret-store-service` cannot sign in to OpenBao/Vault. In the local
-  `kind` cluster OpenBao runs in dev mode and forgets its AppRole when its
-  pod restarts: re-run `make 11_init_openbao`, then `make 050_ai_foundry`
-  (or `050_ai_foundry_all_in_one`).
+  `secret-store-service` cannot sign in to OpenBao/Vault. Verify the JWT
+  mount, role, audience, and ServiceAccount binding. If the local OpenBao pod
+  restarted, run `make 11_init_openbao` to restore its JWT configuration.
 - **AI Traces and Insights stay empty, AI Metrics shows data.** The collector
   reaches Langfuse but its key pair is not the project's: an OTLP exporter
   retries a `401` silently, so the collector looks healthy and stores nothing.

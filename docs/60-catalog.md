@@ -66,7 +66,7 @@ All configuration lives under the `catalog` key.
 | `apiGateway.docling.url` | Yes | AI Services' Docling route: `<ai-services url>/api/docling/`. Empty disables the route. |
 | `secretStoreService.enabled` | No | Off in the chart, on in this repository. Catalog's own `secret-store-service` keeps the signing keys of webhooks in an OpenBao/Vault KV v2 mount. Off, `catalog-engine` runs without a store: webhooks without a secret keep working, while creating or rotating a webhook with a secret answers `502`. |
 | `secretStoreService.config.storeAddr` / `storeKvMount` / `storeNamespace` | Yes (if `secretStoreService.enabled`) | Address of your OpenBao/Vault (the chart deploys none), the KV v2 mount, and the `X-Vault-Namespace` sent on every call (empty for a store without namespaces). |
-| `secretStoreService.config.auth` | Yes (if `secretStoreService.enabled`) | How it signs in: `jwt` (the chart default) with this pod's ServiceAccount token, which needs `auth.jwt.mount` and `auth.jwt.role` on the store; or `approle` with `secrets.secretStoreServiceKeys`. See [Prerequisites](20-prerequisites.md#openbao-or-vault). |
+| `secretStoreService.config.auth` | Yes (if `secretStoreService.enabled`) | The store's JWT mount and role for this pod's ServiceAccount token. See [Prerequisites](20-prerequisites.md#openbao-or-vault). |
 | `telemetry.enabled` / `otelExporterOtlpEndpoint` | No | OpenTelemetry export. `adkBeApp.config.otelExporterOtlpEndpoint` sends the agent runtime over OTLP/HTTP. |
 | `itemsCompressor.config` / `itemsConsumer.config` | Yes | Kafka consumer-group IDs and Postgres cache table/schema names for Catalog's internal processing pipeline. |
 | `mailService.config.host` | Yes (if sending email) | SMTP host for notifications. |
@@ -93,10 +93,6 @@ Generated in this repository via `charts/catalog/render_values.sh`:
 - **`kafkaKeys.bootstrapServers`** — Kafka bootstrap servers address.
 - **`mailServiceKeys.smtpUsername`/`smtpPassword`** — SMTP credentials, if
   `mailService` is used.
-- **`secretStoreServiceKeys`** — `storeRoleId` and `storeSecretId` of the
-  OpenBao/Vault AppRole, only with `secretStoreService.config.auth.method:
-  approle`. The default `jwt` method needs no secret. Not rendered by
-  `render_values.sh`.
 
 ### Bringing your own Secret
 
@@ -130,8 +126,6 @@ in the all-in-one layout, e.g. `cat-adk-be-app-keys`) and contain these keys:
   `postgres-connection-string`.
 - **`mail-service-keys`** (`secrets.mailServiceKeys.enabled`):
   `smtp-username`, `smtp-password`.
-- **`secret-store-service-keys`** (`secrets.secretStoreServiceKeys.enabled`,
-  only with `auth.method: approle`): `storeRoleId`, `storeSecretId`.
 
 `kafkaKeys` follows the same `enabled`/`lookup` mechanics but with a fixed,
 unprefixed Secret name, **`kafka-keys`**, holding `bootstrap.servers`,

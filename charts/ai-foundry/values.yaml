@@ -13,6 +13,8 @@ ai-foundry:
   # (charts/ai-services): docling, memory and the AI gateway answer only a token
   # exchanged for it.
   aiServicesClientId: "ai-services-api"
+  # Use the same AI Services URL as the readers in Catalog and Services.
+  aiServicesSecretStoreUrl: "https://ai-services.mia-platform.test"
 
   # Every service exports OTLP to the collector of AI Services
   # (charts/ai-services, `otelCollector`), which forwards traces to Langfuse and
@@ -43,8 +45,6 @@ ai-foundry:
     aiFoundryWorkflowsKeys:
       enabled: true
     authtoolBffKeys:
-      enabled: true
-    secretStoreServiceKeys:
       enabled: true
     workspaceServiceKeys:
       enabled: true
@@ -101,14 +101,17 @@ ai-foundry:
       # A *Temporal* namespace: must match `ai-services.temporal.namespaces`.
       temporalNamespace: "ai-services"
 
-  # Stores the credentials AI Foundry manages (API credentials, gateway keys)
-  # in an OpenBao/Vault KV v2 mount, signing in with an AppRole.
+  # Store AI Foundry's API credentials in OpenBao/Vault.
   secretStoreService:
     config:
       storeAddr: "http://openbao.openbao.svc.cluster.local:8200"
-      storeKvMount: "kv"
+      storeKvMount: "secret"
+      storeNamespace: "console/production/ai-foundry"
       auth:
-        method: "approle"
+        method: "jwt"
+        jwt:
+          mount: "jwt-console-cluster"
+          role: "ai-foundry-production"
 
   apiGateway:
     docling:
