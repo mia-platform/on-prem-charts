@@ -2,6 +2,8 @@
 catalog:
   url: "https://catalog.mia-platform.test"
 
+  aiServicesClientId: "ai-services-api"
+
   authzUrl: "https://home.mia-platform.test"
 
   ingressRoute:
@@ -45,17 +47,18 @@ catalog:
   apiGateway:
     extraVirtualHosts:
       - "*"
+    docling:
+      url: "https://ai-services.mia-platform.test/api/docling/"
 
   accessControl:
     logLevel: debug
 
   adkBeApp:
     config:
-      googleCloudProject: "operations-lab"
-      googleCloudLocation: "europe-west1"
-      googleGenaiUseVertexai: true
       otelExporterOtlpEndpoint: http://opentelemetry-collector.tracing-system.svc.cluster.local:4318
       otelExporterOtlpProtocol: http/protobuf
+      litellmProxyApiBase: "https://ai-services.mia-platform.test/ai-gateway/"
+      secretStoreBaseUrl: "https://ai-services.mia-platform.test"
 
   doclingService:
     enabled: true
@@ -86,3 +89,15 @@ catalog:
 
   swaggerAggregator:
     enabled: true
+
+  secretStoreService:
+    enabled: true
+    config:
+      storeAddr: "http://openbao.openbao.svc.cluster.local:8200"
+      storeKvMount: "secret"
+      storeNamespace: "console/production/catalog"
+      auth:
+        method: "jwt"
+        jwt:
+          mount: "jwt-console-cluster"
+          role: "catalog-production"
