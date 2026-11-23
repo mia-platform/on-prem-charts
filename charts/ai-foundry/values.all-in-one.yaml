@@ -1,3 +1,19 @@
 ai-foundry:
   namespacePrefix: aif
   authtoolBffUrl: "http://aif-authtool-bff"
+  # AI Services' collector and Prometheus are `ais-*` in `default` in this
+  # layout. OpenBao and Langfuse stay in their own namespaces, like the other
+  # datastores.
+  telemetry:
+    otelExporterOtlpEndpoint: "http://ais-otel-collector.default.svc.cluster.local:4317"
+  adkBeApp:
+    config:
+      otelExporterOtlpEndpoint: "http://ais-otel-collector.default.svc.cluster.local:4318"
+      prometheusBaseUrl: "http://ais-prometheus.default.svc.cluster.local"
+  aiFoundryBe:
+    config:
+      prometheusBaseUrl: "http://ais-prometheus.default.svc.cluster.local"
+  aiFoundryWorkflows:
+    config:
+      # AI Services runs in the same namespace with namespacePrefix `ais`.
+      temporalAddress: "ais-temporal-frontend.default.svc.cluster.local:7233"

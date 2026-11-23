@@ -1,0 +1,80 @@
+{{ if .Values.bootstrapSuperadmin.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: create-super-user-binding
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  ttlSecondsAfterFinished: 60
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: create-super-user-binding
+          image: "mongo"
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -euo pipefail
+              mongosh "$MONGO_CONNECTION" --quiet --eval '
+                const user = db.userinfo.findOne({ username: process.env.EMAIL });
+                if (!user) {
+                  throw new Error(`user ${process.env.EMAIL} not found`);
+                }
+                const userId = user._id.toString();
+                print(userId);
+                printjson(db.bindings.updateOne(
+                  { bindingId: "super-users" },
+                  { $set: { bindingId: "super-users", roles: ["console-super-user"], subjects: [userId], __STATE__: "PUBLIC" } },
+                  { upsert: true }
+                ));
+              '
+          env:
+            - name: MONGO_CONNECTION
+              valueFrom:
+                secretKeyRef:
+                  name: console
+                  key: mongo.url.short
+            - name: EMAIL
+              value: {{ required "set a first login email" .Values.bootstrapSuperadmin.firstLoginEmail | quote }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: add-cms-permissions
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  ttlSecondsAfterFinished: 60
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: add-cms-permissions
+          image: "mongo"
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -euo pipefail
+              mongosh "$MONGO_CONNECTION" --quiet --eval '
+                printjson(db.userinfo.updateOne(
+                  { email: process.env.EMAIL },
+                  { $addToSet: { groups: { $each: ["console_cms", "manage_users"] } } }
+                ));
+              '
+          env:
+            - name: MONGO_CONNECTION
+              valueFrom:
+                secretKeyRef:
+                  name: console
+                  key: mongo.url.short
+            - name: EMAIL
+              value: {{ required "set a first login email" .Values.bootstrapSuperadmin.firstLoginEmail | quote }}
+{{- end }}

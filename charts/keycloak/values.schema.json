@@ -3,7 +3,7 @@
     "type": "object",
     "properties": {
         "keycloak-operator": {
-            "$ref": "https://cdn.mia-platform.eu/runtime/platform/auth/keycloak-chart/0.6.0/values.schema.json"
+            "$ref": "https://cdn.mia-platform.eu/runtime/platform/auth/keycloak-chart/0.7.2/values.schema.json"
         }
     }
 }

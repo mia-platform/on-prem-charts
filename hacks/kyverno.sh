@@ -7,10 +7,14 @@ set -euo pipefail
 #
 # Kubernetes has no cluster-wide trust store: every pod trusts only the CA
 # bundle baked into its image. To let in-cluster clients validate the
-# mkcert-signed https://*.mia-platform.test cert, a Kyverno ClusterPolicy:
-#   1. clones a merged bundle (system CAs + mkcert rootCA) ConfigMap into
-#      every non-system namespace, and
-#   2. mutates every pod to (a) mount it over both /etc/ssl/certs/ca-certificates.crt
+# mkcert-signed https://*.mia-platform.test cert, two Kyverno CEL policies
+# (policies.kyverno.io/v1 — Kyverno >= 1.20 rejects legacy kyverno.io/v1
+# ClusterPolicy create/update):
+#   1. GeneratingPolicy `mkcert-ca-distribute` clones a merged bundle
+#      (system CAs + mkcert rootCA) ConfigMap into every non-system
+#      namespace, existing ones included, and
+#   2. MutatingPolicy `mkcert-ca-trust` mutates every new pod to
+#      (a) mount it over both /etc/ssl/certs/ca-certificates.crt
 #      (Debian/Ubuntu; Envoy) and /etc/ssl/cert.pem (Alpine; the hook's curl)
 #      via subPath, and (b) set SSL_CERT_FILE / CURL_CA_BUNDLE / NODE_EXTRA_CA_CERTS.
 #      Between them these cover curl, Envoy, Node.js, and Rust rustls-native-certs
@@ -28,7 +32,10 @@ set -euo pipefail
 #
 # Environment:
 #   KUBECONFIG          location of kubectl config file
-#   KYVERNO_NAMESPACE   kyverno NS (default kyverno)
+#   KYVERNO_NAMESPACE      kyverno NS (default kyverno)
+#   KYVERNO_CHART_VERSION  kyverno Helm chart version (default 3.10.0, i.e.
+#                          Kyverno v1.20.0); pinned so a new upstream release
+#                          cannot silently change policy APIs under us
 ###############################################################################
 
 ###############################################################################
@@ -77,6 +84,7 @@ if [[ ${#missing[@]} -gt 0 ]]; then
 fi
 
 : "${KYVERNO_NAMESPACE:=kyverno}"
+: "${KYVERNO_CHART_VERSION:=3.10.0}"
 
 ###############################################################################
 # Install Kyverno (single-replica controllers — this is a local dev cluster)
@@ -86,10 +94,10 @@ log_info "Adding Kyverno Helm repo..."
 helm repo add kyverno \
     https://kyverno.github.io/kyverno/ \
     --force-update >/dev/null 2>&1
-helm repo update kyverno >/dev/null 2>&1
 
-log_info "Installing Kyverno..."
+log_info "Installing Kyverno chart ${KYVERNO_CHART_VERSION}..."
 helm upgrade --install kyverno kyverno/kyverno \
+    --version "${KYVERNO_CHART_VERSION}" \
     --namespace "${KYVERNO_NAMESPACE}" --create-namespace \
     --set admissionController.replicas=1 \
     --set backgroundController.replicas=1 \
@@ -160,119 +168,189 @@ rules:
 EOF
 
 ###############################################################################
-# ClusterPolicy — distribute the bundle + mount/wire it into every pod
+# Policies — distribute the bundle + mount/wire it into every pod
 ###############################################################################
 
 # `helm --wait` returns before Kyverno's policy webhook is actually serving,
-# so applying a ClusterPolicy can hit "connection refused". Wait for the
-# admission controller to be Available, then retry the apply with backoff.
+# so applying a policy can hit "connection refused". Wait for the
+# admission controller to be Available, then retry transient webhook errors.
 log_info "Waiting for the Kyverno admission webhook to be ready..."
 kubectl -n "${KYVERNO_NAMESPACE}" wait --for=condition=Available \
     deploy -l app.kubernetes.io/component=admission-controller \
     --timeout=120s >/dev/null
 
-log_info "Applying 'mkcert-ca-trust' ClusterPolicy..."
+# Clusters set up before Kyverno 1.20 carry the legacy ClusterPolicy, which
+# 1.20 no longer executes nor lets us update: drop it (delete is allowed).
+kubectl delete clusterpolicies.kyverno.io mkcert-ca-trust \
+    --ignore-not-found >/dev/null 2>&1 || true
+
+log_info "Applying 'mkcert-ca-distribute' and 'mkcert-ca-trust' policies..."
 POLICY_FILE="$(mktemp)"
 trap 'rm -f "${BUNDLE_FILE}" "${POLICY_FILE}"' EXIT
 cat > "${POLICY_FILE}" <<EOF
-apiVersion: kyverno.io/v1
-kind: ClusterPolicy
+# 1) Clone the merged CA bundle into every non-system namespace so pods can
+#    mount a ConfigMap from their own namespace. generateExisting backfills
+#    namespaces that already exist; synchronize keeps the clones managed.
+apiVersion: policies.kyverno.io/v1
+kind: GeneratingPolicy
+metadata:
+  name: mkcert-ca-distribute
+spec:
+  evaluation:
+    generateExisting:
+      enabled: true
+    synchronize:
+      enabled: true
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [namespaces]
+  matchConditions:
+    - name: not-system-namespace
+      expression: >-
+        !(object.metadata.name in ['kube-system', 'kube-public',
+        'kube-node-lease', '${KYVERNO_NAMESPACE}', 'local-path-storage'])
+  variables:
+    - name: source
+      expression: >-
+        resource.Get("v1", "configmaps", "${KYVERNO_NAMESPACE}",
+        "mkcert-ca-bundle")
+  generate:
+    # A clean object (not the fetched one) so no server-side metadata of the
+    # source (uid, resourceVersion, namespace) leaks into the clone.
+    - expression: >-
+        generator.Apply(object.metadata.name, [{
+          "apiVersion": "v1",
+          "kind": "ConfigMap",
+          "metadata": {"name": "mkcert-ca-bundle"},
+          "data": variables.source.data
+        }])
+---
+# 2) Mount the bundle over the system trust stores AND point TLS clients at
+#    it. subPath keeps the other files in /etc/ssl/certs intact. Applies to
+#    pods at CREATE only (running pods keep their spec until recreated).
+#    Autogen is off: pods of Deployments/StatefulSets/Jobs are mutated when
+#    created, their templates stay untouched.
+apiVersion: policies.kyverno.io/v1
+kind: MutatingPolicy
 metadata:
   name: mkcert-ca-trust
 spec:
-  # Backfill namespaces (and re-mount running pods) that already exist.
-  generateExisting: true
-  rules:
-    # 1) Clone the merged CA bundle into every non-system namespace so pods
-    #    can mount a ConfigMap from their own namespace.
-    - name: distribute-ca-bundle
-      match:
-        any:
-          - resources:
-              kinds: [Namespace]
-      exclude:
-        any:
-          - resources:
-              namespaces:
-                - kube-system
-                - kube-public
-                - kube-node-lease
-                - ${KYVERNO_NAMESPACE}
-                - local-path-storage
-      generate:
-        apiVersion: v1
-        kind: ConfigMap
-        name: mkcert-ca-bundle
-        namespace: "{{request.object.metadata.name}}"
-        synchronize: true
-        clone:
-          namespace: ${KYVERNO_NAMESPACE}
-          name: mkcert-ca-bundle
-    # 2) Mount the bundle over the system trust store AND point Node.js at it.
-    #    subPath keeps the other files in /etc/ssl/certs intact.
-    - name: trust-ca-bundle
-      match:
-        any:
-          - resources:
-              kinds: [Pod]
-      exclude:
-        any:
-          - resources:
-              namespaces:
-                - kube-system
-                - kube-public
-                - kube-node-lease
-                - ${KYVERNO_NAMESPACE}
-                - local-path-storage
-      mutate:
-        patchStrategicMerge:
-          spec:
-            volumes:
-              - name: mkcert-ca-bundle
-                configMap:
-                  name: mkcert-ca-bundle
-            containers:
-              - (name): "?*"
-                volumeMounts:
-                  # Debian/Ubuntu default (also what Envoy's cds.yaml reads).
-                  - name: mkcert-ca-bundle
-                    mountPath: /etc/ssl/certs/ca-certificates.crt
-                    subPath: ca-certificates.crt
-                    readOnly: true
-                  # Alpine/OpenSSL default — curl there is compiled with this
-                  # hardcoded bundle path and ignores SSL_CERT_FILE, so the
-                  # connectivity-check hook (curlimages/curl) needs it here too.
-                  - name: mkcert-ca-bundle
-                    mountPath: /etc/ssl/cert.pem
-                    subPath: ca-certificates.crt
-                    readOnly: true
-                env:
-                  # Node.js services.
-                  - name: NODE_EXTRA_CA_CERTS
-                    value: /etc/ssl/certs/ca-certificates.crt
-                  # curl honors this explicitly, unlike SSL_CERT_FILE.
-                  - name: CURL_CA_BUNDLE
-                    value: /etc/ssl/certs/ca-certificates.crt
-                  # OpenSSL tooling AND Rust rustls-native-certs/openssl-probe
-                  # (e.g. authtool-bff, which reads the system store via this).
-                  - name: SSL_CERT_FILE
-                    value: /etc/ssl/certs/ca-certificates.crt
+  autogen:
+    podControllers:
+      controllers: []
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE]
+        resources: [pods]
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values:
+            - kube-system
+            - kube-public
+            - kube-node-lease
+            - ${KYVERNO_NAMESPACE}
+            - local-path-storage
+  mutations:
+    # Server-side-apply merge: volumes/env merge by name, volumeMounts by
+    # mountPath, containers by name — existing entries are kept.
+    #   /etc/ssl/certs/ca-certificates.crt  Debian/Ubuntu default (also what
+    #                                       Envoy's cds.yaml reads).
+    #   /etc/ssl/cert.pem                   Alpine/OpenSSL default — curl there
+    #                                       is compiled with this hardcoded
+    #                                       path and ignores SSL_CERT_FILE, so
+    #                                       the connectivity-check hook
+    #                                       (curlimages/curl) needs it too.
+    #   NODE_EXTRA_CA_CERTS                 Node.js services.
+    #   CURL_CA_BUNDLE                      curl honors this explicitly.
+    #   SSL_CERT_FILE                       OpenSSL tooling AND Rust
+    #                                       rustls-native-certs/openssl-probe
+    #                                       (e.g. authtool-bff).
+    - patchType: ApplyConfiguration
+      applyConfiguration:
+        expression: >-
+          Object{
+            spec: Object.spec{
+              volumes: [Object.spec.volumes{
+                name: "mkcert-ca-bundle",
+                configMap: Object.spec.volumes.configMap{
+                  name: "mkcert-ca-bundle"
+                }
+              }],
+              containers: object.spec.containers.map(c,
+                Object.spec.containers{
+                  name: c.name,
+                  volumeMounts: [
+                    Object.spec.containers.volumeMounts{
+                      name: "mkcert-ca-bundle",
+                      mountPath: "/etc/ssl/certs/ca-certificates.crt",
+                      subPath: "ca-certificates.crt",
+                      readOnly: true
+                    },
+                    Object.spec.containers.volumeMounts{
+                      name: "mkcert-ca-bundle",
+                      mountPath: "/etc/ssl/cert.pem",
+                      subPath: "ca-certificates.crt",
+                      readOnly: true
+                    }
+                  ],
+                  env: [
+                    Object.spec.containers.env{
+                      name: "NODE_EXTRA_CA_CERTS",
+                      value: "/etc/ssl/certs/ca-certificates.crt"
+                    },
+                    Object.spec.containers.env{
+                      name: "CURL_CA_BUNDLE",
+                      value: "/etc/ssl/certs/ca-certificates.crt"
+                    },
+                    Object.spec.containers.env{
+                      name: "SSL_CERT_FILE",
+                      value: "/etc/ssl/certs/ca-certificates.crt"
+                    }
+                  ]
+                })
+            }
+          }
 EOF
 
+# Retry only while the webhook is not reachable yet; any other error (e.g. a
+# policy rejected by validation) is final and is shown immediately.
+readonly TRANSIENT='connection refused|no endpoints available|failed calling webhook|context deadline exceeded|i/o timeout'
 applied=false
 for attempt in 1 2 3 4 5; do
-    if kubectl apply -f "${POLICY_FILE}" >/dev/null 2>&1; then
+    if output="$(kubectl apply -f "${POLICY_FILE}" 2>&1)"; then
         applied=true
         break
+    fi
+    if ! grep -qiE "${TRANSIENT}" <<<"${output}"; then
+        log_error "Failed to apply the policies:"
+        echo "${output}" >&2
+        exit 1
     fi
     log_warn "Webhook not ready yet (attempt ${attempt}/5), retrying in 5s..."
     sleep 5
 done
 
 if [[ "${applied}" != true ]]; then
-    log_error "Failed to apply the ClusterPolicy after retries."
-    kubectl apply -f "${POLICY_FILE}"  # surface the real error
+    log_error "Failed to apply the policies after retries:"
+    echo "${output}" >&2
     exit 1
 fi
+
+# The policies only act once Kyverno has registered their webhooks: wait for
+# that, so workloads created by the next steps (Traefik, ...) are mutated.
+log_info "Waiting for the policies to be ready..."
+for policy in generatingpolicy/mkcert-ca-distribute \
+    mutatingpolicy/mkcert-ca-trust; do
+    kubectl wait "${policy}" \
+        --for=jsonpath='{.status.conditionStatus.ready}'=true \
+        --timeout=120s >/dev/null
+done
 
 log_ok "Kyverno installed; cluster now trusts the mkcert CA."

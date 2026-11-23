@@ -11,6 +11,14 @@ The chart can run Keycloak either through the Keycloak Operator (the
 default) or as a plain StatefulSet with no operator at all — see
 [Run modes](#run-modes-operator-or-native).
 
+> **Keycloak 26.8.0.** From v15.2.0 the chart (`keycloak-operator` 0.7.2)
+> runs Keycloak **26.8.0** (image `0.3.9-26.8.0-postgres`), which includes
+> upstream security fixes. The image also ships the
+> **`mia-platform-oidc`** identity provider plugin: an OIDC broker that
+> provisions brokered users and their IdP groups into Home's authorization
+> service. See
+> [Identity provider with group provisioning](40-keycloak-realms.md#identity-provider-with-group-provisioning-mia-platform-oidc).
+
 ## Install
 
 ```
@@ -140,13 +148,13 @@ All configuration lives under the `keycloak-operator` key.
 | `keycloak.db.vendor` | Yes | Database vendor, `postgres` in this repo. |
 | `keycloak.db.url` | Yes | JDBC connection URL to your PostgreSQL instance/database. |
 | `keycloak.db.usernameSecret` / `passwordSecret` | Yes | Name/key of a Kubernetes Secret holding the DB credentials (see below). |
-| `keycloak.image.tag` | Yes | Keycloak image tag to deploy. |
+| `keycloak.image.tag` | No | Keycloak image tag to deploy. Not set in this repository, so the operator chart's default is used (`0.3.9-26.8.0-postgres` with `keycloak-operator` 0.7.2, which includes the `mia-platform-oidc` provider). If you pin it, keep a tag that bundles the provider. |
 | `keycloak.truststores` | No | Only needed if Keycloak must trust a custom CA (e.g. to validate other products' client JWKS over TLS with an internal/self-signed certificate). ⚠️ In this repository's default `values.yaml`, this points at a CA bundle built around the local dev `mkcert` CA (see [Overview](10-overview.md#settings-not-suitable-for-production)) — replace it with your organization's real CA before production. |
 | `keycloak.tracing` / `keycloak.telemetry` | No | OpenTelemetry endpoints, disable if you don't run a collector. |
 | `vault.enabled` | Yes | Enables the templated `keycloak-vault-secrets` Secret (see below). |
 | `grafana.enabled` | No | Enables a bundled Grafana dashboard for the operator, optional. |
 
-To have more details on the values you can update, please refer to the [JSON Schema of the Keycloak chart](https://cdn.mia-platform.eu/runtime/platform/auth/keycloak-chart/0.5.4/values.schema.json).
+To have more details on the values you can update, please refer to the [JSON Schema of the Keycloak chart](https://cdn.mia-platform.eu/runtime/platform/auth/keycloak-chart/0.7.2/values.schema.json).
 
 ## Secrets
 
@@ -181,6 +189,25 @@ values-driven render step) before install:
   different realm prefixes (`mia-realm` vs. `mia-realm-extensibility_`):
   each realm gets its own copy of the secret value under its own Secret key,
   even though the `${vault....}` placeholder they resolve looks identical.
+
+  The `products` realm also needs **`mia-realm_scim-client-secret`**.
+  It's the secret of the `scim-client` service account declared by
+  Keycloak Realms (with `products.authz: true`), referenced as
+  `${vault.scim-client-secret}`. The `mia-platform-oidc` identity provider
+  authenticates as this client to provision users and groups in Home. See
+  [Identity provider with group provisioning](40-keycloak-realms.md#identity-provider-with-group-provisioning-mia-platform-oidc).
+  Create the key before importing the realms. This repository's template
+  takes it from `scimClientSecret` in `.local/secrets.yaml` and falls back to
+  `change_me`.
+
+  Since 15.2 the Secret also carries
+  `mia-realm_ai-services-temporal-ui-client-secret`, the secret of the
+  `ai-services-temporal-ui` client the realm creates for the AI Services
+  Temporal UI. The same value must be given to AI Services as
+  `secrets.temporalUiKeys.authClientSecret` (see
+  [AI Services](45-ai-services.md#secrets)). Unlike the identity-provider
+  entries above, it is rendered without surrounding quotes, so the two sides
+  hold exactly the same string.
 
 ## Verify
 

@@ -6,6 +6,7 @@ include charts/catalog/tools.mk
 include charts/keycloak/tools.mk
 include charts/keycloak-realms/tools.mk
 include charts/services/tools.mk
+include charts/ai-services/tools.mk
 include charts/ai-foundry/tools.mk
 include charts/console/tools.mk
 
@@ -32,6 +33,10 @@ help: ## Show this help
 	@$(MAKE) keycloak_realms_master_as_admin_install
 	@$(MAKE) keycloak_realms_production_install
 .PHONY: 020_keycloak_realms
+
+025_ai_services: ## installs AI Services (AI gateway, Temporal, Docling, memory)
+	@$(MAKE) ai_services_install NAMESPACE=ai-services
+.PHONY: 025_ai_services
 
 030_home: ## installs home + RBAC access control systems
 	@$(MAKE) services_install NAMESPACE=services
@@ -63,6 +68,10 @@ help: ## Show this help
 	@$(MAKE) keycloak_realms_master_as_admin_install
 	@$(MAKE) keycloak_realms_production_install
 .PHONY: 020_keycloak_realms_all_in_one
+
+025_ai_services_all_in_one: ## [ALL IN ONE] installs ai-services
+	@$(MAKE) ai_services_install_all_in_one NAMESPACE=default
+.PHONY: 025_ai_services_all_in_one
 
 030_home_all_in_one: ## [ALL IN ONE] installs home + RBAC access control systems
 	@$(MAKE) services_install_all_in_one NAMESPACE=default

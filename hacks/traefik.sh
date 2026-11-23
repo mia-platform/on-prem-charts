@@ -6,8 +6,11 @@ set -euo pipefail
 # traefik.sh — Install traefik on cluster
 #
 # Environment:
-#   TRAEFIK_VALUES      location of traefik chart values
-#   KUBECONFIG          location of kubectl config file
+#   TRAEFIK_VALUES         location of traefik chart values
+#   TRAEFIK_CHART_VERSION  traefik Helm chart version (default 42.4.1, i.e.
+#                          Traefik v3.7.19); pinned so a new upstream release
+#                          cannot silently break the values schema
+#   KUBECONFIG             location of kubectl config file
 ###############################################################################
 
 ###############################################################################
@@ -68,10 +71,12 @@ log_info "Adding Traefik Helm repo..."
 helm repo add traefik \
     https://traefik.github.io/charts/ \
     --force-update >/dev/null 2>&1
-helm repo update traefik >/dev/null 2>&1
 
-log_info "Installing Traefik..."
+: "${TRAEFIK_CHART_VERSION:=42.4.1}"
+
+log_info "Installing Traefik chart ${TRAEFIK_CHART_VERSION}..."
 helm upgrade --install traefik traefik/traefik \
+    --version "${TRAEFIK_CHART_VERSION}" \
     --namespace traefik --create-namespace \
     -f "${TRAEFIK_VALUES}" \
     --wait

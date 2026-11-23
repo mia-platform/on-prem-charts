@@ -19,8 +19,8 @@ elsewhere — everything else exists to support developing and testing them.
 | Path | Contents |
 |---|---|
 | `docs/` | Installation documentation for deploying the suite on your own infrastructure — see [`docs/README.md`](docs/README.md). |
-| `charts/` | One Helm chart per product (`keycloak`, `keycloak-realms`, `services`, `catalog`, `ai-foundry`, `console`), each with its own `Chart.yaml`, `values.yaml`, and `tools.mk`. |
-| `hacks/` | Bash scripts that provision a local development environment: TLS, ingress, DNS, and the datastores (PostgreSQL, MongoDB, Redis, Kafka) the charts depend on. Local-dev only — not part of the product suite. |
+| `charts/` | One Helm chart per product (`keycloak`, `keycloak-realms`, `ai-services`, `services`, `catalog`, `ai-foundry`, `console`), each with its own `Chart.yaml`, `values.yaml`, and `tools.mk`. |
+| `hacks/` | Bash scripts that provision a local development environment: TLS, ingress, DNS, and the datastores (PostgreSQL, MongoDB, Redis, Kafka, OpenBao, Langfuse) the charts depend on. Local-dev only — not part of the product suite. |
 | `.kind/` | Configuration for the local `kind` Kubernetes cluster used in development. |
 | `.local/` | Generated key material for local development (gitignored). |
 | `Makefile` | Entry point for the local development workflow — includes each chart's `tools.mk` and the cluster-provisioning targets in `.kind/tools.mk`. |
@@ -38,7 +38,7 @@ There are two ways to lay the products out in the local cluster:
 
 | Layout | Targets | Where products land |
 |---|---|---|
-| **Namespace-per-product** (default) | `make 010_keycloak` … `make 060_console` | One namespace per product (`keycloak`, `services`, `catalog`, `ai-foundry`, `console`). |
+| **Namespace-per-product** (default) | `make 010_keycloak` … `make 060_console` | One namespace per product (`keycloak`, `ai-services`, `services`, `catalog`, `ai-foundry`, `console`). |
 | **All-in-one** | `make 010_keycloak_all_in_one` … `make 060_console_all_in_one` | Everything in the `default` namespace, using each chart's `values.all-in-one.yaml` overlay. |
 
 Pick one and use it for the whole suite — the two are alternatives, not

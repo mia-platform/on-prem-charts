@@ -21,6 +21,7 @@ as a reference for *what* is needed, not as your installation method.
   | Keycloak | `auth.mia-platform.test` |
   | Services (Home) | `home.mia-platform.test` |
   | Catalog | `catalog.mia-platform.test` |
+  | AI Services | `ai-services.mia-platform.test` |
   | AI Foundry | `ai-foundry.mia-platform.test` |
   | Console | `console.mia-platform.test`, `cms-console.mia-platform.test` |
 
@@ -52,6 +53,11 @@ IdP's details** — see the client-secret note in
 [Keycloak Realms](40-keycloak-realms.md) for where that secret is
 threaded through.
 
+If you want your IdP's groups to drive authorization in Home, federate it
+with the `mia-platform-oidc` provider instead of plain `oidc`. Its access
+token must then be a JWT that carries a groups claim. See
+[Identity provider with group provisioning](40-keycloak-realms.md#identity-provider-with-group-provisioning-mia-platform-oidc).
+
 ## PostgreSQL
 
 A PostgreSQL instance reachable from the cluster, with one database and
@@ -62,15 +68,26 @@ owner-user per product that needs one:
 | `keycloak` | `keycloak_user` | Keycloak |
 | `authz` | `authz_user` (needs the `pg_trgm` extension) | Services (authorization) |
 | `catalog` | `catalog_user` | Catalog |
-| `adk` | `adk_user` | Services, Catalog, AI Foundry (shared "ADK" component) |
+| `adk` | `adk_user` | Services, Catalog, AI Foundry (shared "ADK" component; in AI Foundry also `ai-foundry-be` and `ai-foundry-workflows`) |
+| `workspace` | `workspace_user` | AI Foundry (`workspace-service`) |
+| `litellm` | `litellm_user` | AI Services (AI gateway) |
+| `temporal`, `temporal_visibility` | `temporal_user` | AI Services (Temporal default and visibility stores) |
+| `memory` | `memory_user` (needs the `vector` extension, i.e. [pgvector](https://github.com/pgvector/pgvector)) | AI Services (`memory-service`) |
 
 The exact `CREATE USER`/`CREATE DATABASE` statements this repository uses
 locally are in `hacks/postgres/*.sql`, if useful as a reference for the
 grants/extensions each database needs.
 
-> **Note:** Service `adk-be-app` in [Services](./50-services.md) and [Catalog ](./60-catalog.md) connects
-with `asyncpg`, so its connection string must use the
-`postgresql+asyncpg://` scheme.
+> **Note:** Service `adk-be-app` in [Services](./50-services.md), [Catalog ](./60-catalog.md)
+and [AI Foundry](./70-ai-foundry.md) connects with `asyncpg`, so its
+connection string must use the `postgresql+asyncpg://` scheme. The same
+applies to AI Foundry's `ai-foundry-workflows` and AI Services'
+`memory-service`; `ai-foundry-be`, `workspace-service` and LiteLLM take a
+plain `postgresql://` URL instead.
+
+> **Note:** Creating the `vector` extension requires a superuser, which is
+> why `hacks/postgres/memory.sql` does it once while creating the database:
+> `memory-service` refuses to start without it but does not create it.
 
 ## MongoDB
 
@@ -136,6 +153,97 @@ side, regardless of how you provision the cluster.
 > local `catalog-kafka` cluster during development/testing. It isn't part
 > of the product suite and has nothing to do with how Catalog connects.
 > It it suggested to skip it entirely in your own installation.
+
+## OpenBao or Vault
+
+AI Foundry's `secret-store-service` keeps API credentials entered in the UI
+in an [OpenBao](https://openbao.org/) or HashiCorp Vault instance reachable
+from the cluster. AI Services stores the tenants' AI gateway keys there.
+Catalog's optional store (`catalog.secretStoreService.enabled`) keeps
+webhook signing keys. With the Catalog store disabled, creating or rotating
+webhooks with a signing secret fails. The charts use a separately provisioned
+OpenBao or Vault instance. Each store needs the following settings.
+
+- A **KV v2** secrets engine mount (`secretStoreService.config.storeKvMount`).
+  The default values use `secret` in a separate namespace for each product.
+  `config.storeNamespace` sets the `X-Vault-Namespace` header. With a store
+  that has no namespaces, leave it empty and use a separate mount and policy
+  per product. Set `config.storeAddr` to your store's HTTPS endpoint in production.
+- **Kubernetes JWT** (`config.auth.method: jwt`) uses an auth mount that
+  trusts the cluster's ServiceAccount tokens. Match `config.auth.jwt.audience`
+  to the role's bound audience and bind the role to the Kubernetes namespace
+  and ServiceAccount from the rendered Deployment. Scope the role's policy
+  to the product's KV paths. The `all-in-one` layout prefixes the
+  ServiceAccount names.
+
+Set `ai-foundry.aiServicesSecretStoreUrl` and the
+`adkBeApp.config.secretStoreBaseUrl` values in Catalog and Services to the
+same AI Services gateway URL. AI Foundry writes tenant gateway keys there,
+and Catalog and Services read them there. Migrate or re-create keys already
+stored in Foundry before switching the readers.
+
+### Script `hacks/openbao.sh`
+
+For the local `kind` cluster, [`hacks/openbao.sh`](../hacks/openbao.sh)
+installs OpenBao with its official Helm chart **in dev mode** (in-memory,
+auto-unsealed, root token `root`) into the `openbao` namespace. It provisions
+the KV v2 mounts and JWT roles from the AI Foundry, AI Services and Catalog
+values. The roles accept the products' ServiceAccount tokens in both local
+layouts. After a pod restart, run `make 11_init_openbao` to recreate the
+configuration. In-memory data is lost on restart.
+
+## Langfuse (observability)
+
+AI Services and AI Foundry keep their traces in [Langfuse](https://langfuse.com/)
+(`>= 4.24.0`), installed with its
+[official Helm chart](https://github.com/langfuse/langfuse-k8s). Neither
+chart bundles it. The rest of the observability stack is in the
+`ai-services` chart:
+
+```text
+AI Services + Services + AI Foundry ──OTLP──▶ otelCollector (ai-services) ──traces──▶ Langfuse
+                                                                         └──metrics──▶ prometheus (ai-services)
+AI Foundry (ai-foundry-be, adk-be-app) ◀── reads traces from Langfuse, metrics from prometheus
+```
+
+What it needs:
+
+- A Langfuse **project** and its API key pair (`pk-lf-…`/`sk-lf-…`). The
+  collector writes traces with it
+  (`ai-services.secrets.otelCollectorKeys.langfuseOtlpBasic` =
+  `base64(publicKey:secretKey)`) and AI Foundry reads them back with it
+  (`ai-foundry.secrets.aiFoundryBeKeys.langfuseAuthHeader` and
+  `adkBeAppKeys.langfuseAuthHeader` = `Basic base64(publicKey:secretKey)`).
+- Langfuse reachable from the cluster: its OTLP traces endpoint
+  (`…/api/public/otel/v1/traces`) for the collector, its base URL for AI
+  Foundry.
+- The chart's own prerequisites when it deploys ClickHouse (the default):
+  **cert-manager** and the **ClickHouse operator**, installed once per
+  cluster. Or point Langfuse at an external ClickHouse, PostgreSQL, Redis and
+  S3 for production, as its chart documents.
+
+Observability is optional. To run without it, set `otelCollector.enabled`,
+`prometheus.enabled`, `telemetry.enabled` and
+`secrets.otelCollectorKeys.enabled` to `false` in `charts/ai-services`, and in
+`charts/ai-foundry` set `telemetry.enabled: false` and clear `langfuseBaseUrl`
+and `prometheusBaseUrl` under `adkBeApp.config` and `aiFoundryBe.config`; in
+`charts/services` set `telemetry.enabled: false`. AI
+Foundry's AI Traces, AI Metrics and Insights pages then have no data.
+
+### Script `hacks/langfuse.sh`
+
+For the local `kind` cluster, [`hacks/langfuse.sh`](../hacks/langfuse.sh)
+installs cert-manager, the ClickHouse operator and Langfuse (chart `2.1.0`,
+Langfuse `4.24.0`) into the `langfuse` namespace (in both layouts), with the chart's bundled
+PostgreSQL, Valkey, SeaweedFS and ClickHouse sized for a laptop (one
+ClickHouse and one Keeper replica). Headless initialisation creates the
+`Mia-Platform AI` project and an admin user. The project key pair and the
+admin password are generated once into `.local/langfuse-public-key`,
+`.local/langfuse-secret-key` and `.local/langfuse-admin-password`, which
+`charts/ai-services/render_values.sh` and `charts/ai-foundry/render_values.sh`
+read. The UI is at `https://langfuse.mia-platform.test` (user
+`admin@mia-platform.test`). Usage statistics to Langfuse's servers and public
+sign-up are turned off.
 
 ## Docker registry access
 

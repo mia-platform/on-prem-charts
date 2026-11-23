@@ -9,10 +9,20 @@ ai-foundry:
   authtoolBffUrl: "http://authtool-bff"
   catalogClientId: "catalog-api"
   authzClientId: "authz-api"
+  # Audience of the token exchange towards the AI Services edge
+  # (charts/ai-services): docling, memory and the AI gateway answer only a token
+  # exchanged for it.
+  aiServicesClientId: "ai-services-api"
+  # Use the same AI Services URL as the readers in Catalog and Services.
+  aiServicesSecretStoreUrl: "https://ai-services.mia-platform.test"
 
+  # Every service exports OTLP to the collector of AI Services
+  # (charts/ai-services, `otelCollector`), which forwards traces to Langfuse and
+  # metrics to Prometheus.
   telemetry:
-    enabled: false
-    # otelExporterOtlpEndpoint: http://opentelemetry-collector.tracing-system.svc.cluster.local:4317
+    enabled: true
+    otelExporterOtlpEndpoint: "http://otel-collector.ai-services.svc.cluster.local:4317"
+    otelExporterOtlpProtocol: "grpc"
 
   ingressRoute:
     enabled: true
@@ -26,20 +36,86 @@ ai-foundry:
       enabled: true
     adkBeAppKeys:
       enabled: true
+    aiFoundryBeKeys:
+      enabled: true
     aiFoundryBffKeys:
+      enabled: true
+    aiFoundryProvisionerKeys:
+      enabled: true
+    aiFoundryWorkflowsKeys:
       enabled: true
     authtoolBffKeys:
       enabled: true
+    workspaceServiceKeys:
+      enabled: true
+
+  # Seeds the Item Type Definitions and the default items (agents, tools,
+  # MCP servers, ...) into every Catalog tenant. Signs in as the
+  # `ai-foundry-provisioner` service account the realm creates, with the key
+  # published by the serve workload at
+  # /.well-known/ai-foundry-provisioner/jwks.json.
+  aiFoundryProvisioner:
+    clientId: "ai-foundry-provisioner"
+    serve:
+      enabled: true
+    mcpServers:
+      catalogMcpUrl: "https://catalog.mia-platform.test/mcp"
+      servicesMcpUrl: "https://home.mia-platform.test/mcp"
+      memoryMcpUrl: "https://ai-services.mia-platform.test/memory/mcp/"
 
   adkBeApp:
     config:
-      # otelExporterOtlpTracesEndpoint: "https://otel.console.mia-platform.test"
-      googleCloudProject: "operations-lab"
-      googleCloudLocation: "europe-west1"
-      googleGenaiUseVertexai: true
-      # tempoBaseUrl: "https://grafana.mia-platform.test/api/datasources/proxy/uid/-4W1G8-Vk"
+      # The runtime exports over OTLP/HTTP, to the same collector.
+      otelExporterOtlpEndpoint: "http://otel-collector.ai-services.svc.cluster.local:4318"
+      otelExporterOtlpProtocol: "http/protobuf"
+      # Read back by the agents' observability tools: traces from Langfuse
+      # (secrets.adkBeAppKeys.langfuseAuthHeader), metrics from AI Services'
+      # Prometheus.
+      langfuseBaseUrl: "http://langfuse-web.langfuse.svc.cluster.local:3000"
+      prometheusBaseUrl: "http://prometheus.ai-services.svc.cluster.local"
+      # Every model call goes through the AI gateway (LiteLLM) of AI Services.
+      litellmProxyApiBase: "https://ai-services.mia-platform.test/ai-gateway/"
+      agentMemoryBaseUrl: "https://ai-services.mia-platform.test"
       foundryIntrospectionTools: true
       allowPrivateNetworkMcp: true
+
+  aiFoundryBe:
+    config:
+      # Admin API of the AI gateway: requires secrets.aiFoundryBeKeys.litellmAdminKey,
+      # which is the LiteLLM master key of AI Services.
+      litellmBaseUrl: "https://ai-services.mia-platform.test/ai-gateway/"
+      # AI Traces, AI Metrics and Insights: traces from Langfuse
+      # (secrets.aiFoundryBeKeys.langfuseAuthHeader), metrics from AI Services'
+      # Prometheus (in-cluster, no credential).
+      langfuseBaseUrl: "http://langfuse-web.langfuse.svc.cluster.local:3000"
+      prometheusBaseUrl: "http://prometheus.ai-services.svc.cluster.local"
+
+  aiFoundryBff:
+    config:
+      memoryBaseUrl: "https://ai-services.mia-platform.test"
+
+  # Agentic Workflows: runs on the Temporal cluster deployed by AI Services.
+  aiFoundryWorkflows:
+    config:
+      temporalAddress: "temporal-frontend.ai-services.svc.cluster.local:7233"
+      # A *Temporal* namespace: must match `ai-services.temporal.namespaces`.
+      temporalNamespace: "ai-services"
+
+  # Store AI Foundry's API credentials in OpenBao/Vault.
+  secretStoreService:
+    config:
+      storeAddr: "http://openbao.openbao.svc.cluster.local:8200"
+      storeKvMount: "secret"
+      storeNamespace: "console/production/ai-foundry"
+      auth:
+        method: "jwt"
+        jwt:
+          mount: "jwt-console-cluster"
+          role: "ai-foundry-production"
+
+  apiGateway:
+    docling:
+      url: "https://ai-services.mia-platform.test/api/docling/"
 
   aiFoundryWebsite:
     resources:
@@ -67,8 +143,13 @@ ai-foundry:
         miaDocsHref: "https://docs.mia-platform.eu/"
         vscodeDocsHref: "https://code.visualstudio.com/docs/agent-customization/agent-plugins"
         vscodeMonitoringDocsHref: "https://code.visualstudio.com/docs/agents/guides/monitoring-agents"
+        jetbrainsDocsHref: "https://github.com/microsoft/copilot-intellij-feedback/wiki"
+        jetbrainsTracesDocsHref: "https://github.com/microsoft/copilot-intellij-feedback/wiki/Monitoring-Agent-Usage-with-OpenTelemetry"
         kiroDocsHref: "https://kiro.dev/docs/customization/agent-plugins"
       otelServices:
         - "copilot-chat"
         - "claude-code"
         - "mia-ai-foundry"
+        - "litellm"
+        - "mia-flow"
+        - "adk-be-app"

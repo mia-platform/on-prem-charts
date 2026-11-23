@@ -37,7 +37,18 @@ The realm configuration lives in `charts/keycloak-realms/values/prod/`:
 | `production/products.yaml` | `products` | Clients, roles, groups, identity providers, etc. for the `products` realm. |
 | `production/extensibility.yaml` | `extensibility` | Same, for the `extensibility` realm. |
 
-Of each file, you can find more details on the values you can update in the [JSON Schema of the Keycloak Realms chart](https://cdn.mia-platform.eu/runtime/platform/auth/keycloak-realm-management/0.1.28-2/values.schema.json).
+Of each file, you can find more details on the values you can update in the [JSON Schema of the Keycloak Realms chart](https://cdn.mia-platform.eu/runtime/platform/auth/keycloak-realm-management/0.1.54/values.schema.json).
+
+Since 15.2, `production/products.yaml` enables the `aiServices` product
+(`products.aiServices: true`, `urls.aiServices`), which makes the realm
+create the AI Services clients — `ai-services-api` (the audience AI Foundry
+exchanges tokens for), `ai-services-access-control`,
+`ai-services-temporal-ui` (its secret is
+`${vault.ai-services-temporal-ui-client-secret}`, see
+[Keycloak: secrets](30-keycloak.md#secrets)) and `ai-services-mcp-gateway`.
+With `aiFoundry` enabled, the realm also creates the
+`ai-foundry-provisioner` service-account client, whose key Keycloak fetches
+from `<AI Foundry url>/.well-known/ai-foundry-provisioner/jwks.json`.
 
 `template.sh` renders these into `keycloak-config-cli`-consumable YAML
 under `rendered/<env>/<tier>/<realm-type>/`.
@@ -123,6 +134,126 @@ than this repository's local, `--network host`-based `docker run`.
 > be the actual `client_secret` (or equivalent) issued by that external
 > IdP for the OIDC client you registered there, not a value you invent.
 
+## Identity provider with group provisioning (mia-platform-oidc)
+
+From v15.2.0 the Keycloak image ships the **`mia-platform-oidc`** identity
+provider ([mia-platform-idp](https://git.tools.mia-platform.eu/platform/auth/mia-platform-idp)).
+It brokers logins exactly like the built-in `oidc` provider. In addition,
+after each login it pushes the user and the user's IdP groups into Home's
+authorization service through its SCIM API. Authorization then follows
+what your IdP asserts, as with proxy-header authorization: anyone in group
+`X` at the IdP is in group `X` in Home, so nobody has to maintain those
+memberships by hand.
+
+### How it works
+
+After every login that goes through the upstream IdP (not a silent SSO
+re-authentication against an existing Keycloak session), the provider:
+
+1. Gets an access token for the realm's **`scim-client`** service account
+   (`client_credentials`, cached until shortly before it expires).
+2. Makes sure the user exists in Home (`<endpoint>/Users`). It first looks
+   for `externalId` = the Keycloak user id, then for the email address,
+   and creates the user only if neither lookup finds them.
+3. Reads the groups claim (default `groups`) from the **upstream access
+   token** and aligns the user's Home groups (`<endpoint>/Groups`) with it:
+   - The user is added to every listed group. Groups that don't exist yet
+     are created, with the listed name as `displayName` and `externalId`.
+   - The user is removed from every group that isn't listed.
+   - The claim is authoritative: if it's absent or null, the user is
+     removed from all managed groups.
+
+Provisioning is part of the login. If the SCIM call fails, **the login
+fails**, so a user never gets in without their permissions.
+
+### Prerequisites
+
+- **`scim-client`** in the `products` realm. Keycloak Realms declares it
+  when `products.authz: true` (the default in
+  [`products.yaml`](../charts/keycloak-realms/values/prod/production/products.yaml)).
+  Its service account holds the `authz-api` roles
+  `urn:mia-platform-internal:role:authz:provisioning:users` and
+  `urn:mia-platform-internal:role:authz:provisioning:groups`.
+- **Its secret** in the Keycloak vault, under key
+  `mia-realm_scim-client-secret` (see
+  [Keycloak: Secrets](30-keycloak.md#secrets)). The client and the
+  identity provider both reference it as `${vault.scim-client-secret}`.
+- **[Home](50-services.md)** installed and reachable from Keycloak, plus
+  the id of the tenant users are provisioned into (`default` in this
+  repository's seed data).
+- An **upstream access token that is a JWT** carrying the groups claim.
+  With Okta, use a custom authorization server: the org authorization
+  server issues opaque access tokens, which can't be read. The provider
+  never calls UserInfo for groups.
+
+### Configuration
+
+Set `providerId: mia-platform-oidc` on the identity provider in
+`identityProviders` (in
+[`products.yaml`](../charts/keycloak-realms/values/prod/production/products.yaml)).
+Keep all the usual OIDC settings, and add the `miaScimClient*` keys:
+
+```yaml
+keycloak-realm-management:
+  identityProviders:
+    - alias: customer-idp
+      displayName: <Your IdP display name>
+      enabled: true
+      providerId: mia-platform-oidc    # instead of oidc
+      trustEmail: true
+      config:
+        # --- standard OIDC broker settings, as for providerId: oidc ---
+        issuer: https://idp.example.com/oauth2/<custom-auth-server>
+        authorizationUrl: https://idp.example.com/oauth2/<custom-auth-server>/v1/authorize
+        tokenUrl: https://idp.example.com/oauth2/<custom-auth-server>/v1/token
+        jwksUrl: https://idp.example.com/oauth2/<custom-auth-server>/v1/keys
+        useJwksUrl: "true"
+        logoutUrl: https://idp.example.com/oauth2/<custom-auth-server>/v1/logout
+        clientId: <registered-client-id>
+        clientAuthMethod: private_key_jwt
+        defaultScope: openid email profile groups
+        isAccessTokenJWT: "true"
+        pkceEnabled: "true"
+        pkceMethod: S256
+        syncMode: IMPORT
+
+        # --- SCIM provisioning through the realm's scim-client ---
+        miaScimClientEndpoint: https://home.<your-domain>/api/scim/v2/tenants/<tenant>
+        miaScimClientIssuerUrl: https://auth.<your-domain>/realms/mia-realm
+        miaScimClientClientId: scim-client
+        miaScimClientClientSecret: "${vault.scim-client-secret}"
+        miaScimClientAuthMethod: client_secret_basic
+        # miaScimClientGroupsClaim: groups                 # default
+        # miaScimClientManagedGroups: "developers##admins"  # optional
+```
+
+| Key | Default | Description |
+|---|---|---|
+| `miaScimClientEndpoint` | — | Home's SCIM base URL for the tenant: `https://<home-host>/api/scim/v2/tenants/<tenant>`. If empty, provisioning is off and the provider behaves like `oidc`. |
+| `miaScimClientIssuerUrl` | — | Issuer of the realm that issues the `scim-client` token, `https://<keycloak-host>/realms/<realm>`, or a full metadata URL. If empty, provisioning is off. |
+| `miaScimClientClientId` | — | `scim-client`. |
+| `miaScimClientClientSecret` | — | `"${vault.scim-client-secret}"`. Only used with the `client_secret_*` methods. |
+| `miaScimClientAuthMethod` | `client_secret_basic` | `client_secret_basic`, `client_secret_post` or `private_key_jwt`. `private_key_jwt` signs with the realm's active key. |
+| `miaScimClientGrantType` | `client_credentials` | Only grants that need no parameters beyond `scope` are supported. |
+| `miaScimClientScope` | — | Space-separated scopes to request; leave empty to omit the parameter. |
+| `miaScimClientGroupsClaim` | `groups` | Upstream access-token claim listing the user's group names (a string or an array of strings). Set it to an empty string to leave group memberships alone. |
+| `miaScimClientManagedGroups` | — | Group names the claim is authoritative for, separated by `##` (Keycloak's multivalued format). If set, only these groups are added or removed, and other names in the claim are ignored. If empty, every group of the tenant is managed. |
+| `miaScimClientAssertionAudience` | token endpoint | `private_key_jwt` only: audience of the client assertion. |
+| `miaScimClientAssertionSigningAlg` | `RS256` | `private_key_jwt` only: the realm must have an active key for it. |
+| `miaScimClientAssertionLifetimeSeconds` | `60` | `private_key_jwt` only. |
+| `miaScimClientExpiryMarginSeconds` | `30` | How long before expiry a cached `scim-client` token stops being reused. |
+
+> ⚠️ Because the claim is authoritative, groups you assign by hand in Home
+> to a user brokered through this provider are removed on their next
+> login. The exception is groups left out of `miaScimClientManagedGroups`,
+> when that key is set. Use `miaScimClientManagedGroups` to scope the sync
+> if Home also has groups managed manually.
+
+You can combine this with the `identityProviderMappers` from the
+[Migration Guide](../MIGRATION_GUIDE.md#configure-the-identity-provider-before-installing-realms)
+(e.g. the `provider_sub` mapper and the hardcoded `products/console/guest`
+group mapper). They work the same with `mia-platform-oidc`.
+
 ## Verify
 
 - In the Keycloak admin console, confirm the `products` and `extensibility`
@@ -131,16 +262,33 @@ than this repository's local, `--network host`-based `docker run`.
   client secret that matches what you used to authenticate the
   products/extensibility import.
 
-## Post-install: create a super-admin user
+## Post-install: bootstrap the first super-admin
 
-The `products` realm is imported under the realm name **`mia-realm`**
-(not literally "products" — see `products/010-realm-settings.yaml`). This
-name is a prototype value in this repository's example configuration — set
-it to whatever realm name your installation actually uses, not a fixed
-identifier. In that realm, create a new user with a username and password of your choice,
-then add it to the **`products/authz/superadmin`** group. That group maps
-the `authz-api` client role `urn:mia-platform-internal:role:authz:superadmin`,
-which is what grants full administrative access across the products (Home,
-Catalog, AI Foundry, Console) once you start using them — use this account
-rather than the Keycloak admin account for day-to-day platform
-administration.
+A fresh installation has no platform administrator. Bootstrap the first one
+as follows:
+
+1. **Grant yourself super-admin in Keycloak.** The `products` realm is
+   imported under the realm name **`mia-realm`** (not literally "products" —
+   see `products/010-realm-settings.yaml`). This name is a prototype value
+   in this repository's example configuration — set it to whatever realm
+   name your installation actually uses, not a fixed identifier. In that
+   realm, create a new user with a username and password of your choice
+   (or reuse an existing one), then add it to the
+   **`products/authz/superadmin`** group. That group maps the `authz-api`
+   client role `urn:mia-platform-internal:role:authz:superadmin`, which
+   grants full administrative access across the products (Home, Catalog,
+   AI Foundry, Console) — use this account rather than the Keycloak admin
+   account for day-to-day platform administration.
+2. **Add yourself to the default tenant.** Sign in to Home with that user
+   and add it as a member of the default tenant. Only this first
+   super-admin has to do it by hand: every other user can then be added to
+   tenants from Home by an administrator.
+3. **(Optional) Grant super-admin inside the services.** In Home, go to
+   **Administration → System Roles** and assign the super-admin system role
+   to your user. This keeps the role in the authorization service itself,
+   independent of the Keycloak group.
+4. **(Optional) Remove the Keycloak super-admin role.** Once step 3 is done,
+   you can remove the user from the `products/authz/superadmin` group in
+   Keycloak. Skip this if you didn't do step 3: the Keycloak group would be
+   your only source of super-admin rights, and removing it would leave the
+   platform without an administrator.

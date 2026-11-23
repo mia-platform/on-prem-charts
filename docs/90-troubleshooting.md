@@ -61,9 +61,9 @@ These only apply if you installed the suite into a single namespace — see
   errors, since the wrong service does answer.
 - **Telling pods apart.** `kubectl get pods -n default` mixes every product.
   Filter by release: `kubectl get pods -n default -l app.kubernetes.io/instance=catalog`
-  (or `services`, `ai-foundry`, `console`), or by the `svc-`/`cat-`/`aif-`
-  name prefix.
-- **Datastores did not move.** PostgreSQL, MongoDB, Redis, and Kafka stay in
+  (or `services`, `ai-services`, `ai-foundry`, `console`), or by the
+  `svc-`/`cat-`/`ais-`/`aif-` name prefix.
+- **Datastores did not move.** PostgreSQL, MongoDB, Redis, Kafka, and OpenBao stay in
   their own namespaces in both layouts, and every connection string is
   fully-qualified — so a datastore connection failure in the all-in-one
   layout is a real connectivity/credentials problem, not a namespace
@@ -78,7 +78,14 @@ identically or they will fail to interoperate:
 - `authtoolBffKeys` (`tokenEncKey`, `cookieSecret`, `privateKey`) — shared
   by [Services](50-services.md), [Catalog](60-catalog.md), and
   [AI Foundry](70-ai-foundry.md).
-- The `adk` Postgres connection string — shared by the same three products.
+- The `adk` Postgres connection string — shared by the same three products
+  (and, inside AI Foundry, also by `ai-foundry-be` and `ai-foundry-workflows`).
+- The LiteLLM master key — AI Services' `litellmProxyKeys.masterKey` and AI
+  Foundry's `aiFoundryBeKeys.litellmAdminKey` must be the same value, or
+  every model/team/key page of AI Foundry fails against the AI gateway.
+- The Temporal UI client secret — AI Services'
+  `temporalUiKeys.authClientSecret` and Keycloak's
+  `mia-realm_ai-services-temporal-ui-client-secret`.
 - The Keycloak realm issuer URL (`authorizationServer.issuer`) — must be
   identical across every product's configuration.
 
@@ -123,6 +130,32 @@ These apply if you installed Keycloak with
   `master` realm matches the secret you're using for the
   `client_credentials` grant.
 
+## Identity provider with group provisioning (`mia-platform-oidc`)
+
+These apply if a realm identity provider uses
+`providerId: mia-platform-oidc` — see
+[Keycloak Realms](40-keycloak-realms.md#identity-provider-with-group-provisioning-mia-platform-oidc).
+The Keycloak server log names the identity provider alias in every message
+the provider writes.
+
+- **Login fails after the upstream IdP redirects back.** Provisioning is
+  part of the login, so a SCIM error fails it. Check that Keycloak can reach
+  `miaScimClientEndpoint` (Home's ingress and its TLS certificate, which
+  Keycloak's truststore must trust). Also check that the tenant id in the
+  URL exists.
+- **Token request for `scim-client` is rejected.** The secret Keycloak holds
+  for the `scim-client` client must equal the value of the vault key
+  `mia-realm_scim-client-secret` that `miaScimClientClientSecret` resolves
+  to. See the `${vault....}` known issue in
+  [Keycloak Realms](40-keycloak-realms.md#import-order-and-credentials).
+- **Users are created in Home but get no groups.** The upstream access
+  token is not a JWT (e.g. Okta's org authorization server issues opaque
+  tokens), or it doesn't carry `miaScimClientGroupsClaim`. The log says
+  `is not a readable JWT` in the first case.
+- **Groups assigned by hand in Home disappear.** That's expected: the
+  groups claim is authoritative at every login. Scope the sync with
+  `miaScimClientManagedGroups`.
+
 ## Kafka
 
 - If Catalog can't connect, confirm `catalogKafkaContext.connectionConfig`
@@ -160,6 +193,16 @@ Deleting these completed Jobs does not affect your data — it only clears
 the old, immutable Job records so Helm can recreate them as part of the
 upgrade.
 
+## Console bootstrap job fails (`user <email> not found`)
+
+With `bootstrapSuperadmin.enabled: true`, the `create-super-user-binding`
+hook looks up `bootstrapSuperadmin.firstLoginEmail` in Console's `userinfo`
+collection. If that user has never logged in to Console, the Job fails and
+so does the `helm install`/`upgrade`. Make sure the user is in the Keycloak
+group `products/console/guest`, log in to Console once, and run the
+upgrade again. Alternatively, set `bootstrapSuperadmin.enabled: false` to
+get the release through first. See [Console: Bootstrap](80-console.md#bootstrap).
+
 ## Migrating Console from v14.x
 
 These only come up if you're following the
@@ -175,3 +218,55 @@ Console install to v15.0.0 — they don't apply to a fresh install.
   duplicate `providerUserId` values among active (`__STATE__: "PUBLIC"`)
   users. Re-run the duplicate-check aggregation from the Migration Guide
   and resolve them before retrying.
+
+## AI Foundry and AI Services (15.2)
+
+- **`helm upgrade` of AI Foundry fails with a long message naming a
+  value.** That is `validate-values.yaml` of the `ai-foundry` chart refusing
+  an incomplete combination (e.g. `aiServicesClientId` without
+  `authtoolBffUrl`, a workflows `temporalNamespace` left empty). The message
+  says which value to set.
+- **The `ai-foundry-provisioner` Job fails and the install times out.** Its
+  log names the call that was refused. A `401`/`invalid_client` from
+  Keycloak means the realm has no `ai-foundry-provisioner` client (upgrade
+  [Keycloak Realms](40-keycloak-realms.md)) or Keycloak cannot fetch
+  `<AI Foundry url>/.well-known/ai-foundry-provisioner/jwks.json`. A `403`
+  from Catalog means Catalog's policies don't know that service account:
+  Catalog must be at 15.2 too.
+- **Every Connections / API credentials page answers `503`.**
+  `secret-store-service` cannot sign in to OpenBao/Vault. Verify the JWT
+  mount, role, audience, and ServiceAccount binding. If the local OpenBao pod
+  restarted, run `make 11_init_openbao` to restore its JWT configuration.
+- **AI Traces and Insights stay empty, AI Metrics shows data.** The collector
+  reaches Langfuse but its key pair is not the project's: an OTLP exporter
+  retries a `401` silently, so the collector looks healthy and stores nothing.
+  Check the `otel-collector` logs in AI Services' namespace, then make sure
+  `.local/langfuse-public-key` / `langfuse-secret-key` are the ones
+  `hacks/langfuse.sh` created the project with (deleting them after the first
+  install generates new keys that no project has) and reinstall AI Services
+  and AI Foundry so both render them again. `ai-foundry-be` answering `401`
+  on the traces pages is the same mismatch on the read side.
+- **`make 12_init_langfuse` fails on ClickHouse CRDs.** The Langfuse chart
+  needs cert-manager and the ClickHouse operator first; the script installs
+  both, so a failure here usually means the operator pod is not ready yet:
+  re-run the target.
+- **Workflow runs fail with "namespace not found".** AI Foundry's
+  `aiFoundryWorkflows.config.temporalNamespace` is not one of AI Services'
+  `temporal.namespaces`, or `temporalAddress` points at the wrong
+  namespace's Temporal frontend.
+- **Agents answer with a gateway error.** No model is registered yet on the
+  AI gateway: add one (and its provider credential) from the AI Foundry UI.
+  If the model pages themselves fail, check that AI Foundry's
+  `litellmAdminKey` equals AI Services' LiteLLM `masterKey`.
+- **The Services install times out on the `seedServiceAccounts` Job.** The
+  Job retries for `readyTimeoutSeconds` (300 s) while it waits for the
+  `authz-registrar` key at `<services url>/.well-known/jwks.json`, a token
+  from Keycloak and the `rbac-management` migrations. Its log names the step
+  it is stuck on. A refused token usually means the realm was not
+  re-imported for 15.2. An account whose product URL is empty in
+  `hooks.seedServiceAccounts.products` is registered only if its client
+  already exists, so check that AI Services' URL is set there and that AI
+  Services was installed first.
+- **The Temporal UI loops back to the login, or Keycloak reports
+  `unauthorized_client`.** The `ai-services-temporal-ui` client secret on
+  the two sides differs — see [Shared secrets](#shared-secrets-must-match-across-products).
